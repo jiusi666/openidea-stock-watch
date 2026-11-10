@@ -3,4 +3,4 @@ repository = "https://github.com/<你的账号>/openidea-stock-watch"
 [[versions]]
 version = "0.9.5"
 package = "https://github.com/<你的账号>/openidea-stock-watch/releases/download/v0.9.5/fg.stock-watch-0.9.5.oiplugin"
-sha256 = "299816aa8a8000fd237c8d6aeba29c094c8ff0cf3673317d12c8646f0d76da1a"
+sha256 = "bd098685107381c24b2cc4ab8e3ba9e75eeab8740e0d27f87eb52843b6171a3f"

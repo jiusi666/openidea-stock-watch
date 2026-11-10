@@ -119,6 +119,9 @@ web/index.html         沙箱内界面：无外部资源，靠 postMessage 与 W
 tests/ui/              界面用例与运行器
 scripts/oiplugin.py    打包、签名、校验（官方 CLI 的等价实现）
 docs/PUBLISHING.md     上架流程与包格式
+publish/               提给 openidea-plugins 的两个条目模板与 PR 草稿
+CHANGELOG.md           每个版本改了什么
+vendor/                SDK v0.1.40 源码快照（保证离线可构建）
 dist/plugin.wasm       构建产物
 ```
 

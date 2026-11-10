@@ -24,7 +24,7 @@ authors repo ──build──▶ .oiplugin（签名）──▶ GitHub Release
 | 清单、能力、README 达到市场要求 | 已完成 |
 | 打包 + 签名工具 | 已完成：`scripts/oiplugin.py`（格式已用官方发布的包反证） |
 | 发布密钥 | 已生成：`.keys/fg.key`（公钥 `Z7EAivBTVudC8qvolLk+zloEBpwZtreRlU6iCCmt9dI=`） |
-| 签名包 | 已生成：`dist/fg.stock-watch-0.9.5.oiplugin`，sha256 `299816aa8a8000fd237c8d6aeba29c094c8ff0cf3673317d12c8646f0d76da1a` |
+| 签名包 | 已生成：`dist/fg.stock-watch-0.9.5.oiplugin`，sha256 `bd098685107381c24b2cc4ab8e3ba9e75eeab8740e0d27f87eb52843b6171a3f` |
 | 公开仓库 + Release | **待办**：需要你的 GitHub 账号 |
 | registry PR | **待办**：模板已备在 `publish/` |
 
@@ -132,7 +132,7 @@ repository = "https://github.com/<你的账号>/openidea-stock-watch"
 [[versions]]
 version = "0.9.5"
 package = "https://github.com/<你的账号>/openidea-stock-watch/releases/download/v0.9.5/fg.stock-watch-0.9.5.oiplugin"
-sha256 = "299816aa8a8000fd237c8d6aeba29c094c8ff0cf3673317d12c8646f0d76da1a"
+sha256 = "bd098685107381c24b2cc4ab8e3ba9e75eeab8740e0d27f87eb52843b6171a3f"
 ```
 
 PR 标题写清楚是新增插件，描述里带上：

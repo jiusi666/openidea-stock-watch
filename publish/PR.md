@@ -57,7 +57,7 @@ endpoint fails.
   (`engines.openidea = "^1.4"`), no minified or generated-only code; the UI is a
   hand-written single HTML file.
 - Package: `fg.stock-watch-0.9.5.oiplugin`,
-  sha256 `299816aa8a8000fd237c8d6aeba29c094c8ff0cf3673317d12c8646f0d76da1a`.
+  sha256 `bd098685107381c24b2cc4ab8e3ba9e75eeab8740e0d27f87eb52843b6171a3f`.
 ```
 
 ## 检查清单
