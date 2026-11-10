@@ -25,8 +25,8 @@ authors repo ──build──▶ .oiplugin（签名）──▶ GitHub Release
 | 打包 + 签名工具 | 已完成：`scripts/oiplugin.py`（格式已用官方发布的包反证） |
 | 发布密钥 | 已生成：`.keys/jiusi.key`（公钥 `HpADCl1YhjtlpM3Wz3kjpk0lWpswFqgaMtmkoL4xwEE=`） |
 | 签名包 | 已生成：`dist/jiusi.stock-watch-0.9.5.oiplugin`，sha256 `c231f7f13724f79dce86ec709f2e329d5e6587224bfb67f3251f008880da92b0` |
-| 公开仓库 + Release | **待办**：需要你的 GitHub 账号 |
-| registry PR | **待办**：模板已备在 `publish/` |
+| 公开仓库 + Release | **待办**：建 `jiusi666/openidea-stock-watch`（公开），推 `main`，发 `v0.9.5` Release 并附上 `.oiplugin` |
+| registry PR | **待办**：条目已按 `jiusi666` 填好，放在 `publish/`，Release 就绪后提 PR |
 
 ## 1. 先定 publisher 与 id
 
@@ -102,7 +102,7 @@ gh release create v0.9.5 dist/jiusi.stock-watch-0.9.5.oiplugin \
 拿到可直接下载的地址，形如：
 
 ```
-https://github.com/<你的账号>/openidea-stock-watch/releases/download/v0.9.5/jiusi.stock-watch-0.9.5.oiplugin
+https://github.com/jiusi666/openidea-stock-watch/releases/download/v0.9.5/jiusi.stock-watch-0.9.5.oiplugin
 ```
 
 核对一下这个地址真的能下到同一个文件（CI 会下载它并与 sha256 比对）：
@@ -113,13 +113,13 @@ shasum -a 256 jiusi.stock-watch-0.9.5.oiplugin
 
 ## 5. 提 PR 到 openidea-plugins
 
-Fork 仓库，加两个文件（模板在 `publish/`，替换 `<你的 GitHub 账号>` 与仓库地址即可）：
+Fork 仓库，加两个文件（模板在 `publish/`，替换 `jiusi666` 与仓库地址即可）：
 
 `publishers/jiusi.toml`
 
 ```toml
 name = "九思"
-owners = ["<你的 GitHub 账号>"]
+owners = ["jiusi666"]
 keys = ["HpADCl1YhjtlpM3Wz3kjpk0lWpswFqgaMtmkoL4xwEE="]
 revoked-keys = []
 ```
@@ -127,11 +127,11 @@ revoked-keys = []
 `plugins/jiusi.stock-watch.toml`
 
 ```toml
-repository = "https://github.com/<你的账号>/openidea-stock-watch"
+repository = "https://github.com/jiusi666/openidea-stock-watch"
 
 [[versions]]
 version = "0.9.5"
-package = "https://github.com/<你的账号>/openidea-stock-watch/releases/download/v0.9.5/jiusi.stock-watch-0.9.5.oiplugin"
+package = "https://github.com/jiusi666/openidea-stock-watch/releases/download/v0.9.5/jiusi.stock-watch-0.9.5.oiplugin"
 sha256 = "c231f7f13724f79dce86ec709f2e329d5e6587224bfb67f3251f008880da92b0"
 ```
 

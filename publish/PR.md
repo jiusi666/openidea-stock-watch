@@ -1,7 +1,7 @@
 # PR：新增插件 jiusi.stock-watch
 
 > 这份是提给 [l0ng-ai/openidea-plugins](https://github.com/l0ng-ai/openidea-plugins) 的 PR 正文草稿。
-> 提交前把 `<你的账号>` 换成实际 GitHub 账号，并确认两个文件已按 `publish/` 里的模板放进 fork。
+> 账号 `jiusi666`、仓库地址与 sha256 均已填好；提交前确认两个文件已复制进 fork 的对应目录。
 
 ## 标题
 
@@ -20,7 +20,7 @@ columns; record cost and quantity to get floating P/L computed locally. Stealth
 mode hides names and prices and drops colours, leaving only arrows, for when the
 panel is visible to someone else.
 
-Source: https://github.com/<你的账号>/openidea-stock-watch (Apache-2.0).
+Source: https://github.com/jiusi666/openidea-stock-watch (Apache-2.0).
 
 ### Capabilities
 
@@ -64,7 +64,7 @@ endpoint fails.
 
 - [ ] `publish/publishers/jiusi.toml` 与 `publish/plugins/jiusi.stock-watch.toml` 已复制到 fork 的对应目录
 - [ ] `owners` 是真实 GitHub 登录名
-- [ ] `repository` 与 `package` 里的 `<你的账号>` 已替换，且 Release 已发布
+- [ ] `repository` 与 `package` 指向 `jiusi666/openidea-stock-watch`，且 `v0.9.5` Release 已发布
 - [ ] `package` 地址在未登录的浏览器里能直接下载到同名文件
 - [ ] `sha256` 与下载到的文件一致（`shasum -a 256 jiusi.stock-watch-0.9.5.oiplugin`）
 - [ ] README 的「隐私与权限」仍与清单里的能力一致
