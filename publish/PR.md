@@ -1,4 +1,4 @@
-# PR：新增插件 fg.stock-watch
+# PR：新增插件 jiusi.stock-watch
 
 > 这份是提给 [l0ng-ai/openidea-plugins](https://github.com/l0ng-ai/openidea-plugins) 的 PR 正文草稿。
 > 提交前把 `<你的账号>` 换成实际 GitHub 账号，并确认两个文件已按 `publish/` 里的模板放进 fork。
@@ -6,7 +6,7 @@
 ## 标题
 
 ```
-Add fg.stock-watch — A-share watchlist and positions in a side panel
+Add jiusi.stock-watch — A-share watchlist and positions in a side panel
 ```
 
 ## 正文
@@ -14,7 +14,7 @@ Add fg.stock-watch — A-share watchlist and positions in a side panel
 ```markdown
 ### What it is
 
-`fg.stock-watch` — a side-panel watchlist for A-shares. Add a 6-digit code, see
+`jiusi.stock-watch` — a side-panel watchlist for A-shares. Add a 6-digit code, see
 price / change / intraday range on a card, or switch to a table with 10 optional
 columns; record cost and quantity to get floating P/L computed locally. Stealth
 mode hides names and prices and drops colours, leaving only arrows, for when the
@@ -48,7 +48,7 @@ endpoint fails.
 - `python tests/ui/run.py` — 7 headless-Chrome cases driving the real panel:
   column drag, list drag, horizontal scroll, sticky columns, toast placement,
   delete confirmation, position dialog, stealth mode.
-- `python scripts/oiplugin.py verify dist/fg.stock-watch-0.9.5.oiplugin` —
+- `python scripts/oiplugin.py verify dist/jiusi.stock-watch-0.9.5.oiplugin` —
   unpacks, recomputes the digest and verifies the signature.
 
 ### Notes
@@ -56,15 +56,15 @@ endpoint fails.
 - The wasm is built from this source with `wasm32-wasip2` + component model
   (`engines.openidea = "^1.4"`), no minified or generated-only code; the UI is a
   hand-written single HTML file.
-- Package: `fg.stock-watch-0.9.5.oiplugin`,
-  sha256 `bd098685107381c24b2cc4ab8e3ba9e75eeab8740e0d27f87eb52843b6171a3f`.
+- Package: `jiusi.stock-watch-0.9.5.oiplugin`,
+  sha256 `c231f7f13724f79dce86ec709f2e329d5e6587224bfb67f3251f008880da92b0`.
 ```
 
 ## 检查清单
 
-- [ ] `publish/publishers/fg.toml` 与 `publish/plugins/fg.stock-watch.toml` 已复制到 fork 的对应目录
+- [ ] `publish/publishers/jiusi.toml` 与 `publish/plugins/jiusi.stock-watch.toml` 已复制到 fork 的对应目录
 - [ ] `owners` 是真实 GitHub 登录名
 - [ ] `repository` 与 `package` 里的 `<你的账号>` 已替换，且 Release 已发布
 - [ ] `package` 地址在未登录的浏览器里能直接下载到同名文件
-- [ ] `sha256` 与下载到的文件一致（`shasum -a 256 fg.stock-watch-0.9.5.oiplugin`）
+- [ ] `sha256` 与下载到的文件一致（`shasum -a 256 jiusi.stock-watch-0.9.5.oiplugin`）
 - [ ] README 的「隐私与权限」仍与清单里的能力一致

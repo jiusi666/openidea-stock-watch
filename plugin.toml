@@ -1,4 +1,4 @@
-id = "fg.stock-watch"
+id = "jiusi.stock-watch"
 name = "Stock Watch 股票盯盘"
 version = "0.9.5"
 description = "A 股自选与持仓的轻量盯盘工具：卡片 / 表格双视图、列表与表格列都能拖动排序、日内区间条、涨跌配色与隐匿模式，浮动盈亏本地计算。行情来自公开接口轮询，自选、持仓与偏好只留在本机。"

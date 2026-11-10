@@ -1,0 +1,6 @@
+repository = "https://github.com/<你的账号>/openidea-stock-watch"
+
+[[versions]]
+version = "0.9.5"
+package = "https://github.com/<你的账号>/openidea-stock-watch/releases/download/v0.9.5/jiusi.stock-watch-0.9.5.oiplugin"
+sha256 = "c231f7f13724f79dce86ec709f2e329d5e6587224bfb67f3251f008880da92b0"

@@ -4,7 +4,7 @@ A 股自选与持仓的轻量盯盘工具，作为 OpenIDEA 的侧边工具窗�
 
 | | |
 | --- | --- |
-| 插件 id | `fg.stock-watch` |
+| 插件 id | `jiusi.stock-watch` |
 | 作者 | 九思 |
 | 许可 | Apache-2.0 |
 | 插件 API | `^1.4` |
@@ -31,7 +31,7 @@ A 股自选与持仓的轻量盯盘工具，作为 OpenIDEA 的侧边工具窗�
 
 市场里还没上架时，有两种装法：
 
-- **从包安装**：`Settings › Plugins › Install from Disk`，选 `fg.stock-watch-0.9.5.oiplugin`。
+- **从包安装**：`Settings › Plugins › Install from Disk`，选 `jiusi.stock-watch-0.9.5.oiplugin`。
 - **开发期链接**：`openidea-plugin link`（或把本目录写进 `%APPDATA%\ai.l0ng.openidea\plugins\links.json` 的 `paths`），改界面不用重编。
 
 上架流程见 [docs/PUBLISHING.md](docs/PUBLISHING.md)。
@@ -101,8 +101,8 @@ python tests/ui/run.py hscroll    # 只跑名字含 hscroll 的
 ```sh
 pip install blake3 cryptography
 python scripts/oiplugin.py check                       # 按安装时的规则检查清单
-python scripts/oiplugin.py pack . --key .keys/fg.key --publisher fg
-python scripts/oiplugin.py verify dist/fg.stock-watch-0.9.5.oiplugin
+python scripts/oiplugin.py pack . --key .keys/jiusi.key --publisher jiusi
+python scripts/oiplugin.py verify dist/jiusi.stock-watch-0.9.5.oiplugin
 ```
 
 `pack` 会打印插件摘要与包文件的 SHA-256——后者要填进插件市场的索引。包格式、摘要算法与签名细节见 [docs/PUBLISHING.md](docs/PUBLISHING.md#包格式)。
