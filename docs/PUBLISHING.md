@@ -24,7 +24,7 @@ authors repo ──build──▶ .oiplugin（签名）──▶ GitHub Release
 | 清单、能力、README 达到市场要求 | 已完成 |
 | 打包 + 签名工具 | 已完成：`scripts/oiplugin.py`（格式已用官方发布的包反证） |
 | 发布密钥 | 已生成：`.keys/jiusi.key`（公钥 `HpADCl1YhjtlpM3Wz3kjpk0lWpswFqgaMtmkoL4xwEE=`） |
-| 签名包 | 已生成：`dist/jiusi.stock-watch-0.9.5.oiplugin`，sha256 `c231f7f13724f79dce86ec709f2e329d5e6587224bfb67f3251f008880da92b0` |
+| 签名包 | 已生成：`dist/jiusi.stock-watch-0.9.5.oiplugin`，sha256 `1ca79b4fa4bc18bfbf2e6fb8f72ba886dd0e5f83898848b39023a0ebbba31ba1` |
 | 公开仓库 + Release | **待办**：建 `jiusi666/openidea-stock-watch`（公开），推 `main`，发 `v0.9.5` Release 并附上 `.oiplugin` |
 | registry PR | **待办**：条目已按 `jiusi666` 填好，放在 `publish/`，Release 就绪后提 PR |
 
@@ -87,6 +87,8 @@ python scripts/oiplugin.py verify dist/jiusi.stock-watch-0.9.5.oiplugin
 
 有官方 CLI 时等价命令是 `openidea-plugin build` + `openidea-plugin pack . --key jiusi.key --publisher jiusi`；`pack` 之前会先跑一遍 `check`。
 
+> 打包前确认工作区文件是 LF 换行。Windows 上用编辑器改过 `plugin.toml` 等文件会变成 CRLF，包里的字节就和仓库里的源码不一致（`check` 打印的 digest 与 `verify` 读到的对不上），审核时算"源码与包不符"。`.gitattributes` 已强制 `eol=lf`，`git checkout` 出来就是 LF；用脚本改文件时记得 `newline="\n"`。
+
 ## 4. 发 GitHub Release
 
 把包挂到一个 release 上，标签用 `v<version>`：
@@ -132,7 +134,7 @@ repository = "https://github.com/jiusi666/openidea-stock-watch"
 [[versions]]
 version = "0.9.5"
 package = "https://github.com/jiusi666/openidea-stock-watch/releases/download/v0.9.5/jiusi.stock-watch-0.9.5.oiplugin"
-sha256 = "c231f7f13724f79dce86ec709f2e329d5e6587224bfb67f3251f008880da92b0"
+sha256 = "1ca79b4fa4bc18bfbf2e6fb8f72ba886dd0e5f83898848b39023a0ebbba31ba1"
 ```
 
 PR 标题写清楚是新增插件，描述里带上：

@@ -57,7 +57,7 @@ endpoint fails.
   (`engines.openidea = "^1.4"`), no minified or generated-only code; the UI is a
   hand-written single HTML file.
 - Package: `jiusi.stock-watch-0.9.5.oiplugin`,
-  sha256 `c231f7f13724f79dce86ec709f2e329d5e6587224bfb67f3251f008880da92b0`.
+  sha256 `1ca79b4fa4bc18bfbf2e6fb8f72ba886dd0e5f83898848b39023a0ebbba31ba1`.
 ```
 
 ## 检查清单
