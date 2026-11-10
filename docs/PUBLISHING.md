@@ -89,6 +89,17 @@ python scripts/oiplugin.py verify dist/jiusi.stock-watch-0.9.5.oiplugin
 
 > 打包前确认工作区文件是 LF 换行。Windows 上用编辑器改过 `plugin.toml` 等文件会变成 CRLF，包里的字节就和仓库里的源码不一致（`check` 打印的 digest 与 `verify` 读到的对不上），审核时算"源码与包不符"。`.gitattributes` 已强制 `eol=lf`，`git checkout` 出来就是 LF；用脚本改文件时记得 `newline="\n"`。
 
+## 3.5 首次推送：认证
+
+本机实测：SSH 的 22 与 443 端口都会被重置（`Connection reset by peer`），只能走 HTTPS；HTTPS 直连又偶发 `Error in the HTTP2 framing layer`，所以仓库局部已设 `http.version=HTTP/1.1`、`http.postBuffer` 放大。
+
+认证这一步，Git Credential Manager 在没有交互终端时会回落到 Git 自带的用户名／密码提示（`Logon failed, use ctrl+c to cancel basic credential prompt`），而 GitHub 早已不支持密码。用一个 Token 最省事：
+
+1. 生成 classic token：<https://github.com/settings/tokens/new?scopes=public_repo&description=openidea-stock-watch>（`public_repo` 够用，只给公开仓库读写）
+2. 在本机终端跑 `bash publish/push.sh`，提示时粘贴 token（不回显），脚本会先用 API 校验、再存入 Windows 凭据管理器、然后推 `main` 与 `v0.9.5`
+
+token 不要写进 `.git/config`、不要提交、不要贴到聊天或 issue 里；泄露了就立刻在 GitHub 上撤销。凭据存好之后，后续发版直接 `git push` 即可。
+
 ## 4. 发 GitHub Release
 
 把包挂到一个 release 上，标签用 `v<version>`：
