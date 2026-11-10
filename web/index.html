@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>股票盯盘</title>
+<style>
+  :root { color-scheme: inherit; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    padding: 12px;
+    font-family: var(--openidea-font-ui, system-ui, sans-serif);
+    font-size: var(--sw-fs, 13px);
+    color: var(--openidea-fg, #222);
+    background: var(--openidea-bg, transparent);
+    --sw-up: #d1453f;
+    --sw-down: #12855f;
+    --sw-muted: var(--openidea-fg-muted, #888);
+    --sw-line: var(--openidea-border, rgba(127,127,127,.28));
+    --sw-card: var(--openidea-bg-elevated, rgba(127,127,127,.07));
+    --sw-hover: var(--openidea-bg-hover, rgba(127,127,127,.14));
+    --sw-accent: var(--openidea-accent, #4a86d8);
+    /* 固定在左右两侧的列必须有实色底，否则横向滚动时会透出下面的内容 */
+    --sw-solid: var(--openidea-bg-elevated, #fff);
+  }
+  :root[data-theme="dark"] body, body[data-theme="dark"] { --sw-solid: var(--openidea-bg-elevated, #2b2b2b); }
+  :root[data-theme="dark"] body[data-scheme="cn"], body[data-theme="dark"][data-scheme="cn"] {
+    --sw-up: #ff6b6b; --sw-down: #4ec9a0;
+  }
+  body[data-scheme="us"] { --sw-up: #12855f; --sw-down: #d1453f; }
+  :root[data-theme="dark"] body[data-scheme="us"], body[data-theme="dark"][data-scheme="us"] {
+    --sw-up: #4ec9a0; --sw-down: #ff6b6b;
+  }
+  body[data-scheme="mono"], body[data-stealth="on"] { --sw-up: var(--sw-muted); --sw-down: var(--sw-muted); }
+  body[data-size="small"]  { --sw-fs: 11px; }
+  body[data-size="normal"] { --sw-fs: 13px; }
+  body[data-size="large"]  { --sw-fs: 15px; }
+  body[data-stealth="on"]  { --sw-fs: 11px; }
+
+  /* 展开卡片后出现的系统滚动条改成细窄半透明，不再像一根突兀的进度条。 */
+  html, body { scrollbar-width: thin; scrollbar-color: rgba(127,127,127,.35) transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(127,127,127,.32); background-clip: padding-box;
+    border: 2px solid transparent; border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(127,127,127,.6); background-clip: padding-box; }
+
+  .up { color: var(--sw-up); }
+  .down { color: var(--sw-down); }
+  .flat { color: var(--sw-muted); }
+  .muted { color: var(--sw-muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  .badge {
+    display: inline-block; padding: 1px 6px; border-radius: 5px;
+    font-size: calc(var(--sw-fs) - 2px); white-space: nowrap;
+    background: rgba(127,127,127,.12);
+    background: color-mix(in srgb, currentColor 13%, transparent);
+  }
+
+  .app { display: flex; flex-direction: column; gap: 10px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .brand .title { font-size: calc(var(--sw-fs) + 2px); font-weight: 500; letter-spacing: .3px; }
+  .brand .sub { font-size: calc(var(--sw-fs) - 2px); color: var(--sw-muted); white-space: nowrap; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--sw-down); flex: none; }
+  .dot.closed { background: var(--sw-muted); }
+  body[data-stealth="on"] .dot { background: var(--sw-muted); }
+  .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex: none; }
+  button {
+    font: inherit; color: inherit; cursor: pointer;
+    background: var(--sw-card); border: 1px solid var(--sw-line);
+    border-radius: 7px; padding: 4px 10px;
+    transition: background .12s ease, border-color .12s ease, color .12s ease;
+  }
+  button:hover { background: var(--sw-hover); }
+  button:focus-visible { outline: 2px solid var(--sw-accent); outline-offset: 1px; }
+  button.tool { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: calc(var(--sw-fs) - 2px); white-space: nowrap; }
+  button.tool svg { width: 13px; height: 13px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  button.tool.active { border-color: var(--sw-accent); color: var(--sw-accent); }
+  @media (max-width: 340px) { button.tool span { display: none; } button.tool { padding: 5px; } }
+  button.primary { background: var(--sw-accent); border-color: transparent; color: #fff; padding: 5px 14px; }
+  button.mini { padding: 2px 7px; font-size: calc(var(--sw-fs) - 2px); border-radius: 5px; }
+  button.mini.danger:hover { border-color: #d1453f; color: #d1453f; background: rgba(209,69,63,.12); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  body[data-stealth="on"] button { opacity: .62; }
+  body[data-stealth="on"] button:hover { opacity: 1; }
+  @keyframes sw-spin { to { transform: rotate(360deg); } }
+  button.spin svg { animation: sw-spin .55s linear; }
+  @media (prefers-reduced-motion: reduce) { button.spin svg { animation: none; } }
+
+  /* 提示条：浮在面板底部上方的气泡，不占布局——出现时不会把列表顶下去，也不挡顶部的按钮。 */
+  .notice {
+    position: fixed; left: 50%; bottom: 14px; z-index: 60;
+    display: flex; align-items: center; gap: 7px;
+    box-sizing: border-box; max-width: calc(100% - 20px);
+    padding: 5px 12px; border-radius: 999px;
+    border: 1px solid var(--sw-line);
+    background: var(--openidea-bg-elevated, #fff);
+    color: var(--openidea-fg, #222);
+    box-shadow: 0 8px 22px -10px rgba(0,0,0,.45), 0 1px 2px rgba(0,0,0,.06);
+    font-size: calc(var(--sw-fs) - 1px);
+    pointer-events: none;
+    opacity: 0; visibility: hidden;
+    transform: translate(-50%, 10px);
+    transition: opacity .16s ease, transform .16s ease, visibility .16s;
+  }
+  .notice.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+  .notice::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--sw-accent); flex: none; }
+  .notice[data-kind="ok"]::before { background: #2f9e6e; }
+  .notice[data-kind="error"] { border-color: color-mix(in srgb, #d1453f 50%, var(--sw-line)); }
+  .notice[data-kind="error"]::before { background: #d1453f; }
+  :root[data-theme="dark"] .notice, body[data-theme="dark"] .notice {
+    background: var(--openidea-bg-elevated, #2b2b2b);
+    color: var(--openidea-fg, #ddd);
+  }
+
+  .addbar { display: flex; gap: 6px; }
+  input, select {
+    font: inherit; color: inherit; background: var(--sw-card);
+    border: 1px solid var(--sw-line); border-radius: 7px; padding: 5px 9px;
+    min-width: 0;
+  }
+  input:focus, select:focus { outline: 2px solid var(--sw-accent); outline-offset: -1px; }
+  input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
+  .addbar input { flex: 1; }
+  input[type="number"] { width: 72px; }
+  select { max-width: 100%; }
+
+  .listbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--sw-line); padding-bottom: 6px; }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { border-color: transparent; background: transparent; font-size: var(--sw-fs); padding: 4px 12px; }
+  .tabs button.active { background: var(--sw-card); border-color: var(--sw-line); font-weight: 500; }
+  .tabs .count { color: var(--sw-muted); font-size: calc(var(--sw-fs) - 2px); margin-left: 4px; }
+  .viewswitch { display: flex; gap: 3px; flex: none; margin-left: auto; }
+  .viewswitch button { padding: 2px 9px; font-size: calc(var(--sw-fs) - 2px); border-color: transparent; background: transparent; }
+  .viewswitch button.active { background: var(--sw-card); border-color: var(--sw-line); font-weight: 500; }
+
+  .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .summary .cell { background: var(--sw-card); border: 1px solid var(--sw-line); border-radius: 9px; padding: 8px 9px; }
+  .summary .k { font-size: calc(var(--sw-fs) - 2px); color: var(--sw-muted); }
+  .summary .v { font-size: calc(var(--sw-fs) + 1px); font-weight: 500; margin-top: 3px; }
+
+  .indices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .idx { background: var(--sw-card); border: 1px solid var(--sw-line); border-radius: 9px; padding: 8px 9px; min-width: 0; }
+  .idx .n { font-size: calc(var(--sw-fs) - 2px); color: var(--sw-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .idx .v { font-size: calc(var(--sw-fs) + 2px); font-weight: 500; margin-top: 3px; }
+  .idx .p { font-size: calc(var(--sw-fs) - 2px); margin-top: 2px; }
+
+  .list { position: relative; display: flex; flex-direction: column; gap: 6px; }
+  /* 列表拖动排序：源行变淡、落点画一条插入线，拖出列表则取消。 */
+  .rowline {
+    position: absolute; left: 2px; right: 2px; height: 2px; display: none;
+    border-radius: 2px; background: var(--sw-accent); z-index: 5; pointer-events: none;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--sw-accent) 30%, transparent);
+  }
+  .row.dragging { opacity: .45; border-style: dashed; }
+  .tablewrap tbody tr.dragging { opacity: .45; }
+  body.row-dragging, body.row-dragging * { cursor: grabbing !important; user-select: none !important; }
+  body[data-sortable="on"] .tablewrap tbody tr[data-secid] { cursor: grab; }
+  .drag-grip {
+    flex: none; margin-right: -2px; padding: 0 1px;
+    color: var(--sw-muted); opacity: .5; cursor: grab; letter-spacing: -1px; line-height: 1;
+  }
+  .row:hover .drag-grip { opacity: .9; color: var(--sw-accent); }
+  body[data-sortable="off"] .drag-grip { display: none; }
+  .row { background: var(--sw-card); border: 1px solid var(--sw-line); border-radius: 10px; overflow: hidden; cursor: pointer; }
+  .row:hover { border-color: var(--sw-accent); }
+  body[data-density="compact"] .row-main { padding: 8px 10px; }
+  body[data-density="comfortable"] .row-main { padding: 13px 12px; }
+  .row-main { display: flex; align-items: center; gap: 8px; }
+  .id-block { min-width: 0; flex: 1; }
+  .id-block .code { font-size: calc(var(--sw-fs) - 1px); color: var(--sw-muted); letter-spacing: .4px; }
+  .id-block .name { font-weight: 500; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pos-tag {
+    display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 4px;
+    font-size: calc(var(--sw-fs) - 3px); font-weight: 400;
+    border: 1px solid var(--sw-line); color: var(--sw-muted);
+  }
+  .price-block { text-align: right; flex: none; }
+  .price-block .price { font-size: calc(var(--sw-fs) + 4px); font-weight: 500; line-height: 1.2; }
+  .price-block .change { font-size: calc(var(--sw-fs) - 2px); margin-top: 3px; white-space: nowrap; }
+  .arrow { width: 20px; text-align: center; font-size: calc(var(--sw-fs) + 2px); flex: none; }
+  .row-actions { display: flex; gap: 3px; flex: none; }
+
+  /* 卡片专属：日内区间条。轨道左端=今日最低、右端=今日最高，
+     灰色竖线=昨收，彩色滑块=现价，滑块相对昨收的位置就是当天强弱。 */
+  .range { border-top: 1px solid var(--sw-line); padding: 7px 10px 8px; }
+  .range-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 8px; margin-bottom: 6px;
+    font-size: calc(var(--sw-fs) - 3px); color: var(--sw-muted);
+  }
+  .range-head b { font-weight: 500; }
+  .range-track { position: relative; height: 6px; border-radius: 3px; background: var(--sw-line); }
+  .range-fill { position: absolute; top: 0; height: 100%; border-radius: 3px; opacity: .5; }
+  .range-fill.up, .range-now.up { background: var(--sw-up); }
+  .range-fill.down, .range-now.down { background: var(--sw-down); }
+  .range-fill.flat, .range-now.flat { background: var(--sw-muted); }
+  .range-prev { position: absolute; top: -3px; width: 2px; height: 12px; border-radius: 1px; background: var(--sw-muted); transform: translateX(-1px); }
+  .range-now { position: absolute; top: -3px; width: 9px; height: 12px; border-radius: 3px; transform: translateX(-4px); }
+  .range-labels { display: flex; justify-content: space-between; gap: 6px; margin-top: 5px; font-size: calc(var(--sw-fs) - 3px); color: var(--sw-muted); }
+  .range-labels .mid { opacity: .85; }
+
+  .detail { border-top: 1px solid var(--sw-line); padding: 9px 10px; display: grid; gap: 8px; background: rgba(127,127,127,.045); cursor: default; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px 10px; }
+  .kv .k { font-size: calc(var(--sw-fs) - 2px); color: var(--sw-muted); }
+  .kv .v { font-size: var(--sw-fs); margin-top: 2px; }
+  .hint { font-size: calc(var(--sw-fs) - 2px); color: var(--sw-muted); line-height: 1.6; }
+
+  /* 横向滚动：原生滚动条在 WebView 里悬停/滚动时会跳样式甚至消失，这里彻底隐藏，
+     改用下面自绘的 .hscroll（常显、可拖、可点轨道）。 */
+  .tablescroll { position: relative; }
+  .tablewrap {
+    overflow-x: auto; overflow-y: hidden;
+    border: 1px solid var(--sw-line); border-radius: 10px;
+    scrollbar-width: none;
+  }
+  .tablewrap::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  /* 只有真的溢出时才给底部留白放自绘滚动条，否则表格底部不该多出空隙 */
+  .tablewrap.hscroll-on { padding-bottom: 14px; }
+
+  .hscroll {
+    position: absolute; left: 11px; right: 11px; bottom: 4px; height: 7px;
+    border-radius: 4px; background: rgba(127,127,127,.16);
+    cursor: pointer;
+  }
+  .hscroll.off { display: none; }
+  .hscroll-thumb {
+    position: absolute; left: 0; top: 0; height: 100%; width: 40px;
+    border-radius: 4px; background: rgba(127,127,127,.6);
+    transition: background .12s ease;
+  }
+  .hscroll:hover .hscroll-thumb { background: rgba(127,127,127,.78); }
+  .hscroll-thumb:hover, .hscroll-thumb.active { background: rgba(127,127,127,.95); }
+  /* 左右还有内容时压一道内阴影做提示 */
+  .tablewrap.more-right { box-shadow: inset -15px 0 14px -14px rgba(127,127,127,.6); }
+  .tablewrap.more-left { box-shadow: inset 15px 0 14px -14px rgba(127,127,127,.6); }
+  .tablewrap.more-left.more-right {
+    box-shadow: inset -15px 0 14px -14px rgba(127,127,127,.6), inset 15px 0 14px -14px rgba(127,127,127,.6);
+  }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: var(--sw-fs); }
+  th, td { padding: 6px 9px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--sw-line); }
+  th { font-size: calc(var(--sw-fs) - 2px); font-weight: 500; color: var(--sw-muted); background: var(--sw-card); }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  tbody tr[data-secid]:hover { background: var(--sw-hover); }
+  tbody tr:last-child td { border-bottom: none; }
+  /* 操作列钉在右侧：横向滚动看其它列时，持仓/移除始终可点。
+     底色必须是不透明的实色，否则滚动时会透出下面的数字。 */
+  .tablewrap th:last-child, .tablewrap td.actions {
+    position: sticky; right: 0; z-index: 1;
+    background: var(--sw-solid);
+    min-width: 96px; /* 保证两个按钮排一行，不被压成两行 */
+  }
+  .tablewrap td.actions { box-shadow: -6px 0 6px -6px rgba(0,0,0,.4); }
+  .tablewrap tbody tr[data-secid]:hover td.actions {
+    background: color-mix(in srgb, var(--sw-solid) 88%, var(--openidea-fg, #222) 12%);
+  }
+
+  /* 代码 / 名称钉在左边：横向滚到中间也能看出是哪只股票。
+     第二列的 left 由 JS 量出第一列宽度写进 --col1w（字号变大也不会错位）。 */
+  .tablewrap th:nth-child(1), .tablewrap td:nth-child(1),
+  .tablewrap th:nth-child(2), .tablewrap td:nth-child(2) {
+    position: sticky; z-index: 2;
+    background: var(--sw-solid);
+  }
+  .tablewrap th:nth-child(1), .tablewrap td:nth-child(1) { left: 0; }
+  .tablewrap th:nth-child(2), .tablewrap td:nth-child(2) { left: var(--col1w, 62px); }
+  /* 表头两列要保留表头那股灰调，用半透明层叠在实色底上 */
+  .tablewrap th:nth-child(1), .tablewrap th:nth-child(2) {
+    background-image: linear-gradient(var(--sw-card), var(--sw-card));
+  }
+  .tablewrap th:nth-child(2), .tablewrap td:nth-child(2) {
+    box-shadow: 6px 0 10px -6px rgba(0,0,0,.45);
+    border-right: 1px solid var(--sw-line); /* 和滚过去的内容拉开分界，避免数字糊在股票名后面 */
+  }
+  .tablewrap tbody tr[data-secid]:hover td:nth-child(1),
+  .tablewrap tbody tr[data-secid]:hover td:nth-child(2) {
+    background: color-mix(in srgb, var(--sw-solid) 88%, var(--openidea-fg, #222) 12%);
+  }
+  td.actions { text-align: right; }
+
+  /* 表头拖动排序：只有可选列可拖，固定列与操作列钉住不动。 */
+  th.draggable { cursor: grab; user-select: none; }
+  th.draggable:hover { color: var(--openidea-fg, #222); }
+  th.draggable:hover .grip { opacity: .95; color: var(--sw-accent); }
+  th.draggable:active { cursor: grabbing; }
+  th.dragging { opacity: .35; }
+  th.drop-before { box-shadow: inset 2px 0 0 var(--sw-accent); color: var(--sw-accent); }
+  th.drop-after { box-shadow: inset -2px 0 0 var(--sw-accent); color: var(--sw-accent); }
+  body.col-dragging, body.col-dragging * { cursor: grabbing !important; user-select: none !important; }
+  .grip { display: inline-block; margin-right: 3px; opacity: .45; letter-spacing: -1px; }
+
+  /* 持仓小弹窗：点「持仓」浮出，保存后自动关闭。 */
+  .modal {
+    position: fixed; inset: 0; z-index: 40; display: flex;
+    align-items: center; justify-content: center; padding: 16px;
+    background: rgba(0,0,0,.36);
+  }
+  .modal-card {
+    width: min(330px, 100%); max-height: 100%; overflow: auto;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 14px; border: 1px solid var(--sw-line); border-radius: 12px;
+    background: var(--openidea-bg-elevated, #fff); color: var(--openidea-fg, #222);
+    box-shadow: 0 14px 34px -10px rgba(0,0,0,.5);
+  }
+  :root[data-theme="dark"] .modal-card, body[data-theme="dark"] .modal-card {
+    background: var(--openidea-bg-elevated, #2b2b2b); color: var(--openidea-fg, #ddd);
+  }
+  .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .modal-title { font-weight: 500; }
+  .modal-sub { font-size: calc(var(--sw-fs) - 3px); color: var(--sw-muted); margin-top: 2px; }
+  .modal-close { border-color: transparent; background: transparent; padding: 0 3px; line-height: 1; font-size: calc(var(--sw-fs) + 2px); }
+  .modal-price { display: flex; align-items: baseline; gap: 8px; }
+  .modal-price .p { font-size: calc(var(--sw-fs) + 5px); font-weight: 500; }
+  .modal-price .c { font-size: calc(var(--sw-fs) - 1px); }
+  .modal-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal-fields label { display: block; font-size: calc(var(--sw-fs) - 2px); color: var(--sw-muted); margin-bottom: 3px; }
+  .modal-fields input { width: 100%; box-sizing: border-box; }
+  .preview { display: grid; gap: 4px; padding: 7px 9px; border: 1px solid var(--sw-line); border-radius: 8px; background: rgba(127,127,127,.05); }
+  .preview .l { display: flex; justify-content: space-between; gap: 8px; font-size: calc(var(--sw-fs) - 1px); }
+  .preview .l > span:first-child { color: var(--sw-muted); }
+  .modal-actions { display: flex; align-items: center; gap: 6px; }
+  .modal-actions .spacer { flex: 1; }
+
+  /* 误触保护：删除需要点两次，第一次进入待确认状态。 */
+  button.mini.armed { background: #d1453f; border-color: #d1453f; color: #fff; }
+  button.mini.armed:hover { background: #b93a35; border-color: #b93a35; color: #fff; }
+
+  .settings { display: flex; flex-direction: column; gap: 9px; border: 1px solid var(--sw-line); border-radius: 10px; padding: 11px 12px; background: var(--sw-card); }
+  .settings-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 9px; border-bottom: 1px solid var(--sw-line); }
+  .settings-title { font-size: calc(var(--sw-fs) + 1px); font-weight: 500; }
+  .settings-sub { font-size: calc(var(--sw-fs) - 3px); color: var(--sw-muted); margin-top: 2px; }
+  .settings-head-actions { display: flex; gap: 4px; flex: none; }
+  details.group { border: 1px solid var(--sw-line); border-radius: 9px; padding: 0 10px; background: rgba(127,127,127,.035); }
+  details.group > summary {
+    cursor: pointer; padding: 8px 0; font-size: var(--sw-fs); font-weight: 500;
+    list-style: none; display: flex; align-items: center; gap: 7px;
+  }
+  details.group > summary::-webkit-details-marker { display: none; }
+  details.group > summary::before {
+    content: ''; width: 6px; height: 6px; flex: none;
+    border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg); transition: transform .15s ease;
+  }
+  details.group[open] > summary::before { transform: rotate(45deg); }
+  details.group > div { padding-bottom: 10px; }
+  .group-hint { margin-left: auto; font-size: calc(var(--sw-fs) - 3px); font-weight: 400; color: var(--sw-muted); }
+  .settings .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 9px 12px; }
+  .settings .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 7px 10px; margin-top: 9px; }
+  .field label { display: block; font-size: calc(var(--sw-fs) - 2px); color: var(--sw-muted); margin-bottom: 3px; }
+  .field select, .field input[type="number"] { width: 100%; box-sizing: border-box; }
+  .check { display: flex; align-items: center; gap: 6px; font-size: var(--sw-fs); cursor: pointer; }
+  .check input { accent-color: var(--sw-accent); cursor: pointer; }
+  .muted-field { opacity: .45; }
+  .coltools { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 9px; }
+  .coltools .hint { margin-left: auto; }
+  .swatches { display: flex; gap: 10px; margin-top: 5px; }
+  .swatch { display: inline-flex; align-items: center; gap: 4px; font-size: calc(var(--sw-fs) - 3px); color: var(--sw-muted); }
+  .swatch i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+  .swatch.up i { background: var(--sw-up); }
+  .swatch.down i { background: var(--sw-down); }
+
+  .empty { text-align: center; padding: 24px 12px; color: var(--sw-muted); line-height: 1.7; cursor: default; }
+  .empty-icon { display: block; width: 46px; height: 32px; margin: 0 auto 8px; }
+  .footer { display: flex; justify-content: space-between; gap: 8px; font-size: calc(var(--sw-fs) - 2px); color: var(--sw-muted); border-top: 1px solid var(--sw-line); padding-top: 8px; }
+  .footer span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  body[data-stealth="on"] .indices,
+  body[data-stealth="on"] .detail,
+  body[data-stealth="on"] .summary,
+  body[data-stealth="on"] .range { display: none; }
+  body[data-stealth="on"] .price-block .price { font-size: var(--sw-fs); }
+  body[data-stealth="on"] .settings { opacity: .9; }
+</style>
+</head>
+<body data-scheme="cn" data-density="compact" data-size="normal" data-stealth="off">
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot" id="marketDot"></span>
+      <span class="title">股票盯盘</span>
+      <span class="sub" id="marketState">加载中</span>
+    </div>
+    <div class="actions">
+      <button class="tool" id="stealthBtn" type="button" title="切换隐匿模式（Alt+Shift+H）：去色、仅箭头、隐藏名称与价格" aria-label="切换隐匿模式">
+        <svg viewBox="0 0 16 16"><path d="M8 1.6 13 3.4v4.1c0 3-2 5.2-5 6.9-3-1.7-5-3.9-5-6.9V3.4z"/><path d="M5.9 8h4.2"/></svg>
+        <span>隐匿</span>
+      </button>
+      <button class="tool" id="settingsBtn" type="button" title="显示设置：配色、表格列、视图形式、隐私与数据" aria-label="显示设置">
+        <svg viewBox="0 0 16 16"><path d="M7 1.5h2l.3 1.4 1.2.5 1.3-.7 1.4 1.4-.7 1.3.5 1.2 1.4.3v2l-1.4.3-.5 1.2.7 1.3-1.4 1.4-1.3-.7-1.2.5-.3 1.4H7l-.3-1.4-1.2-.5-1.3.7-1.4-1.4.7-1.3-.5-1.2-1.4-.3v-2l1.4-.3.5-1.2-.7-1.3 1.4-1.4 1.3.7 1.2-.5z"/><circle cx="8" cy="8" r="2.1"/></svg>
+        <span>设置</span>
+      </button>
+      <button class="tool" id="refreshBtn" type="button" title="刷新行情" aria-label="刷新行情">
+        <svg viewBox="0 0 16 16"><path d="M13.5 7a5.5 5.5 0 1 0-.7 3.6"/><path d="M13.5 2.8V7H9.3"/></svg>
+        <span>刷新</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="addbar">
+    <input id="code" placeholder="添加代码，如 600519 / sh600519" autocomplete="off" spellcheck="false">
+    <button class="primary" id="addBtn" type="button">添加</button>
+  </section>
+
+  <section class="settings" id="settings" hidden>
+    <div class="settings-head">
+      <div>
+        <div class="settings-title">设置</div>
+        <div class="settings-sub" id="settingsSummary">卡片 · 独立布局 · 红涨绿跌</div>
+      </div>
+      <div class="settings-head-actions">
+        <button class="mini" id="resetPrefs" type="button" title="把所有设置恢复为默认值">恢复默认</button>
+        <button class="mini" id="closeSettings" type="button">完成</button>
+      </div>
+    </div>
+
+    <details class="group" open>
+      <summary>布局与外观 <span class="group-hint" id="groupLayoutHint"></span></summary>
+      <div class="grid2">
+        <div class="field"><label for="p-colorScheme">涨跌配色</label>
+          <select id="p-colorScheme" data-pref="colorScheme">
+            <option value="cn">红涨绿跌（A 股）</option>
+            <option value="us">绿涨红跌</option>
+            <option value="mono">无颜色，仅箭头</option>
+          </select>
+          <div class="swatches"><span class="swatch up">涨 <i></i></span><span class="swatch down">跌 <i></i></span></div>
+        </div>
+        <div class="field"><label for="p-viewStyle">列表形式</label>
+          <select id="p-viewStyle" data-pref="viewStyle">
+            <option value="card">卡片（振幅条 + 展开明细）</option>
+            <option value="table">表格（所有列直接铺开）</option>
+          </select>
+        </div>
+        <div class="field"><label for="p-listMode">列表组织</label>
+          <select id="p-listMode" data-pref="listMode">
+            <option value="tabs">自选 / 持仓 Tab 切换</option>
+            <option value="all">合并成一个列表</option>
+            <option value="positions">只看持仓</option>
+          </select>
+        </div>
+        <div class="field"><label for="p-density">列表密度</label>
+          <select id="p-density" data-pref="density"><option value="compact">紧凑</option><option value="comfortable">舒展</option></select>
+        </div>
+        <div class="field"><label for="p-fontSize">字号</label>
+          <select id="p-fontSize" data-pref="fontSize"><option value="small">小</option><option value="normal">中</option><option value="large">大</option></select>
+        </div>
+        <div class="field"><label for="p-decimals">价格小数位</label>
+          <select id="p-decimals" data-pref="decimals"><option value="2">2 位</option><option value="3">3 位</option></select>
+        </div>
+        <div class="field" id="field-detail"><label for="p-detail">卡片展开明细级别</label>
+          <select id="p-detail" data-pref="detail"><option value="minimal">精简</option><option value="normal">标准</option><option value="full">完整（含持仓）</option></select>
+        </div>
+        <label class="check"><input type="checkbox" id="p-showIndices" data-pref="showIndices"> 显示大盘指数条</label>
+        <label class="check" id="field-rangeBar"><input type="checkbox" id="p-showRangeBar" data-pref="showRangeBar"> 卡片显示日内区间条</label>
+      </div>
+    </details>
+
+    <details class="group">
+      <summary>表格列（仅表格视图生效） <span class="group-hint" id="groupColHint">3 列</span></summary>
+      <div class="grid2">
+        <div class="field"><label for="p-columnPreset">列预设</label>
+          <select id="p-columnPreset" data-pref="columnPreset">
+            <option value="compact">精简：涨跌额 / 昨收</option>
+            <option value="normal">标准：+ 成交量</option>
+            <option value="full">完整：全部 10 列</option>
+            <option value="custom">自定义（下方勾选）</option>
+          </select>
+        </div>
+        <label class="check" id="field-headerLabels"><input type="checkbox" id="p-showHeaderLabels" data-pref="showHeaderLabels"> 表格显示列标题</label>
+      </div>
+      <div id="colControls">
+        <div class="coltools">
+          <button class="mini" id="colAll" type="button">全选</button>
+          <button class="mini" id="colNone" type="button">全不选</button>
+          <button class="mini" id="colOrderReset" type="button" title="把可拖动列的显示顺序恢复为默认">恢复列顺序</button>
+          <span class="hint" id="colCount">已选 3 列</span>
+        </div>
+        <div class="grid3" id="colPicker">
+          <label class="check"><input type="checkbox" data-col="change"> 涨跌额</label>
+          <label class="check"><input type="checkbox" data-col="prevClose"> 昨收</label>
+          <label class="check"><input type="checkbox" data-col="open"> 今开</label>
+          <label class="check"><input type="checkbox" data-col="high"> 最高</label>
+          <label class="check"><input type="checkbox" data-col="low"> 最低</label>
+          <label class="check"><input type="checkbox" data-col="volume"> 成交量</label>
+          <label class="check"><input type="checkbox" data-col="cost"> 成本</label>
+          <label class="check"><input type="checkbox" data-col="qty"> 持仓数量</label>
+          <label class="check"><input type="checkbox" data-col="profit"> 浮动盈亏</label>
+          <label class="check"><input type="checkbox" data-col="profitPercent"> 盈亏比例</label>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:8px">表格里按住表头列名即可拖动调整顺序（代码 / 名称 / 现价 / 涨跌幅固定在最左，操作列固定在最右），顺序会记住。卡片视图是独立设计（日内区间条 + 持仓标记 + 「全部」展开明细），不受这些列影响。</div>
+    </details>
+
+    <details class="group">
+      <summary>隐私 / 隐匿 <span class="group-hint" id="groupPrivacyHint"></span></summary>
+      <div class="grid2">
+        <label class="check"><input type="checkbox" id="p-stealth" data-pref="stealth"> 隐匿模式（Alt+Shift+H）</label>
+        <label class="check"><input type="checkbox" id="p-stealthHideNames" data-pref="stealthHideNames"> 隐匿时隐藏股票名称</label>
+        <label class="check"><input type="checkbox" id="p-stealthMaskPrice" data-pref="stealthMaskPrice"> 隐匿时遮住绝对价格</label>
+        <div class="field"><label for="p-statusBarMode">IDE 状态栏</label>
+          <select id="p-statusBarMode" data-pref="statusBarMode"><option value="index">显示上证指数</option><option value="profit">显示持仓盈亏</option><option value="hidden">完全隐藏</option></select>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:8px">隐匿模式下去色、只保留上下箭头与涨跌幅，隐藏名称/价格/指数/振幅条，压缩字号，暂停提醒通知；所有按钮仍可点击。</div>
+    </details>
+
+    <details class="group">
+      <summary>数据与提醒 <span class="group-hint" id="groupDataHint"></span></summary>
+      <div class="grid2">
+        <div class="field"><label for="p-intervalSec">刷新间隔（秒，3–300）</label><input type="number" id="p-intervalSec" data-pref="intervalSec" min="3" max="300" step="1"></div>
+        <div class="field"><label for="p-alertPercent">涨跌提醒阈值（%，0 关闭）</label><input type="number" id="p-alertPercent" data-pref="alertPercent" min="0" max="100" step="0.1"></div>
+        <div class="field"><label for="p-sortBy" title="选择「自选顺序」后，可直接按住列表行上下拖动调整">排序</label>
+          <select id="p-sortBy" data-pref="sortBy"><option value="custom">自选顺序（可拖动排序）</option><option value="percent">按涨跌幅</option><option value="code">按代码</option></select>
+        </div>
+        <div class="field"><label for="p-profitDisplay">盈亏显示</label>
+          <select id="p-profitDisplay" data-pref="profitDisplay"><option value="amount">金额</option><option value="percent">百分比</option><option value="hidden">隐藏</option></select>
+        </div>
+        <label class="check"><input type="checkbox" id="p-quietHours" data-pref="quietHours"> 休市时降低刷新频率</label>
+      </div>
+      <div class="hint" style="margin-top:8px">面板设置即时生效并保存在本机；Settings › Plugins 里的同名项作为新设备的默认值。</div>
+    </details>
+  </section>
+
+  <div class="listbar">
+    <div class="tabs" id="tabs" hidden>
+      <button type="button" data-tab="watchlist" id="tabWatch">自选 <span class="count" id="watchCount">0</span></button>
+      <button type="button" data-tab="positions" id="tabPos">持仓 <span class="count" id="posCount">0</span></button>
+    </div>
+    <div class="viewswitch" id="viewSwitch">
+      <button type="button" data-view="card" id="viewCard">卡片</button>
+      <button type="button" data-view="table" id="viewTable">表格</button>
+    </div>
+  </div>
+  <section class="summary" id="summary" hidden></section>
+  <section class="indices" id="indices"></section>
+  <main class="list" id="list"></main>
+  <div class="empty" id="empty" hidden>
+    <svg class="empty-icon" viewBox="0 0 48 32"><rect x="1" y="1" width="46" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".45"/><path d="M6 23l8-7 6 4 8-10 7 6 7-4" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".7"/></svg>
+    <div id="emptyText">这里还没有股票。<br>在上方输入 6 位代码或 sh600519 添加一只。</div>
+  </div>
+
+  <footer class="footer">
+    <span id="status">等待数据…</span>
+    <span id="source"></span>
+  </footer>
+</div>
+
+<!-- 持仓录入弹窗：保存后自动关闭并刷新列表 -->
+<div class="modal" id="posModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="posTitle">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="posTitle">持仓</div>
+        <div class="modal-sub" id="posSub"></div>
+      </div>
+      <button class="modal-close" id="posClose" type="button" title="关闭（Esc）" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-price">
+      <span class="p num" id="posPrice">-</span>
+      <span class="c num" id="posChange"></span>
+    </div>
+    <div class="modal-fields">
+      <div>
+        <label for="posCost">成本价</label>
+        <input type="number" step="0.01" min="0" id="posCost" placeholder="如 1400.00" autocomplete="off">
+      </div>
+      <div>
+        <label for="posQty">持仓数量（股）</label>
+        <input type="number" step="100" min="0" id="posQty" placeholder="如 100" autocomplete="off">
+      </div>
+    </div>
+    <div class="preview" id="posPreview"></div>
+    <div class="modal-actions">
+      <button class="mini danger" id="posClear" type="button" title="把成本价与数量都清零">清空持仓</button>
+      <span class="spacer"></span>
+      <button class="mini" id="posCancel" type="button">取消</button>
+      <button class="primary" id="posSave" type="button">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 浮层提示：不参与布局，出现时不会把面板内容顶下去 -->
+<div class="notice" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var body = document.body;
+  var hasHost = !!(window.openidea && window.openidea.postMessage);
+  var prefs = null;
+  var snapshot = null;
+  var timer = null;
+  var lastPoll = 0;
+  var expanded = {};
+  var activeTab = 'watchlist';
+  var toastTimer = null;
+  var lastToast = { text: '', at: 0 };
+  var NUMERIC = { intervalSec: 1, alertPercent: 1, decimals: 1 };
+
+  var COLUMN_LABELS = {
+    change: '涨跌额', prevClose: '昨收', open: '今开', high: '最高', low: '最低',
+    volume: '成交量', cost: '成本', qty: '持仓', profit: '浮动盈亏', profitPercent: '盈亏比例'
+  };
+  var PRESETS = {
+    compact: ['change', 'prevClose'],
+    normal: ['change', 'prevClose', 'volume'],
+    full: ['change', 'prevClose', 'open', 'high', 'low', 'volume', 'cost', 'qty', 'profit', 'profitPercent']
+  };
+  var SCHEME_NAMES = { cn: '红涨绿跌', us: '绿涨红跌', mono: '无颜色' };
+  var PRESET_NAMES = { compact: '精简列', normal: '标准列', full: '完整列', custom: '自定义列' };
+
+  var DEMO_PREFS = {
+    colorScheme: 'cn', stealth: false, stealthHideNames: true, stealthMaskPrice: true,
+    statusBarMode: 'index', density: 'compact', fontSize: 'normal', detail: 'full',
+    showIndices: true, listMode: 'tabs', viewStyle: 'card',
+    columns: PRESETS.normal.slice(), columnOrder: PRESETS.full.slice(),
+    columnPreset: 'normal', showHeaderLabels: true, showRangeBar: true,
+    intervalSec: 10, sortBy: 'custom', profitDisplay: 'amount',
+    alertPercent: 0, quietHours: true, decimals: 2
+  };
+
+  var DEMO_ROWS = [
+    { secid: '1.600519', code: '600519', name: '贵州茅台', price: 1433.23, change: -11.76, percent: -0.81,
+      open: 1438.23, high: 1443.00, low: 1431.26, prevClose: 1444.99, volume: 9263,
+      cost: 1400, qty: 100, profit: 3323, profitPercent: 2.37 },
+    { secid: '0.000001', code: '000001', name: '平安银行', price: 11.78, change: -0.11, percent: -0.93,
+      open: 11.83, high: 11.85, low: 11.73, prevClose: 11.89, volume: 349515,
+      cost: 0, qty: 0, profit: null, profitPercent: null },
+    { secid: '0.300750', code: '300750', name: '宁德时代', price: 248.19, change: -0.45, percent: -0.18,
+      open: 253.11, high: 253.11, low: 247.17, prevClose: 248.64, volume: 147217,
+      cost: 230, qty: 200, profit: 3638, profitPercent: 3.95 }
+  ];
+  var DEMO_INDICES = [
+    { name: '上证指数', price: 3673.30, percent: 0.34 },
+    { name: '深证成指', price: 11274.33, percent: 1.16 },
+    { name: '创业板指', price: 2511.98, percent: 2.17 }
+  ];
+
+  var local = hasHost ? null : {
+    rows: JSON.parse(JSON.stringify(DEMO_ROWS)),
+    indices: JSON.parse(JSON.stringify(DEMO_INDICES)),
+    prefs: JSON.parse(JSON.stringify(DEMO_PREFS))
+  };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function cls(v) { return v > 0 ? 'up' : (v < 0 ? 'down' : 'flat'); }
+  function arrow(v) { return v > 0 ? '↑' : (v < 0 ? '↓' : '→'); }
+  function digits() { return prefs ? Number(prefs.decimals) : 2; }
+  function num(v, d) {
+    if (typeof v !== 'number' || !isFinite(v)) return '-';
+    return v.toFixed(d === undefined ? digits() : d);
+  }
+  function signed(v, d) {
+    if (typeof v !== 'number' || !isFinite(v)) return '-';
+    return (v > 0 ? '+' : '') + v.toFixed(d === undefined ? digits() : d);
+  }
+  // 浮层提示：不占布局，2 秒后自己淡出；同样的内容短时间内不重复弹，
+  // 免得轮询失败时每 10 秒顶一次气泡。
+  function toast(text, kind) {
+    if (!text) return;
+    var now = Date.now();
+    if (text === lastToast.text && now - lastToast.at < 3000) return;
+    lastToast = { text: text, at: now };
+    var el = $('toast');
+    el.textContent = text;
+    el.setAttribute('data-kind', kind || 'info');
+    el.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, kind === 'error' ? 3200 : 1900);
+  }
+
+  // 宿主回执里的「已保存 / 已删除」这类确认不必打扰，只把出错信息弹成提示。
+  // 同一条错误（比如接口不通）一分钟内只弹一次，免得每次轮询都糊一遍气泡。
+  var lastError = { text: '', at: 0 };
+  function notifyMessage(text) {
+    if (!text) return;
+    if (!/失败|不对|未授予|无权|超时|拒绝|权限|无法|不存在|请先|HTTP\s*\d{3}/.test(text)) return;
+    var now = Date.now();
+    if (text === lastError.text && now - lastError.at < 60000) return;
+    lastError = { text: text, at: now };
+    toast(text, 'error');
+  }
+  function tradingHours() {
+    var d = new Date(), day = d.getDay(), m = d.getHours() * 60 + d.getMinutes();
+    if (day === 0 || day === 6) return false;
+    return (m >= 570 && m <= 690) || (m >= 780 && m <= 900);
+  }
+
+  function send(obj) {
+    if (hasHost) window.openidea.postMessage(JSON.stringify(obj));
+    else handleLocal(obj);
+  }
+
+  function checkedColumns() {
+    var out = [];
+    var nodes = document.querySelectorAll('[data-col]');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].checked) out.push(nodes[i].getAttribute('data-col'));
+    }
+    return out;
+  }
+
+  function collectPrefs() {
+    var out = {};
+    var nodes = document.querySelectorAll('[data-pref]');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i], key = el.getAttribute('data-pref');
+      if (el.type === 'checkbox') out[key] = el.checked;
+      else if (NUMERIC[key] || el.type === 'number') out[key] = Number(el.value);
+      else out[key] = el.value;
+    }
+    out.columns = checkedColumns();
+    // 列顺序不是表单控件，直接沿用内存里的当前顺序（拖动表头时已经写过一次）。
+    out.columnOrder = prefs && prefs.columnOrder ? prefs.columnOrder.slice() : [];
+    return out;
+  }
+
+  function syncControls(p) {
+    var nodes = document.querySelectorAll('[data-pref]');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i], key = el.getAttribute('data-pref');
+      if (!(key in p) || document.activeElement === el) continue;
+      if (el.type === 'checkbox') el.checked = !!p[key];
+      else el.value = String(p[key]);
+    }
+    var cols = p.columns || [];
+    var boxes = document.querySelectorAll('[data-col]');
+    for (var j = 0; j < boxes.length; j++) {
+      boxes[j].checked = cols.indexOf(boxes[j].getAttribute('data-col')) >= 0;
+    }
+  }
+
+  // 列顺序兜底：去掉非法键与重复项，再把遗漏的列按默认顺序补到末尾。
+  function normalizedOrder(p) {
+    var order = (p.columnOrder || []).filter(function (k, i, arr) {
+      return COLUMN_LABELS[k] && arr.indexOf(k) === i;
+    });
+    Object.keys(COLUMN_LABELS).forEach(function (k) {
+      if (order.indexOf(k) < 0) order.push(k);
+    });
+    return order;
+  }
+
+  function applyPrefs(p) {
+    prefs = p;
+    p.columnOrder = normalizedOrder(p);
+    var isTable = (p.viewStyle || 'card') === 'table';
+    body.setAttribute('data-scheme', p.colorScheme || 'cn');
+    body.setAttribute('data-density', p.density || 'compact');
+    body.setAttribute('data-size', p.fontSize || 'normal');
+    body.setAttribute('data-stealth', p.stealth ? 'on' : 'off');
+    // 只有「自选顺序」时列表才能拖动：别的排序方式展示顺序由宿主决定
+    body.setAttribute('data-sortable', p.sortBy === 'custom' ? 'on' : 'off');
+    $('stealthBtn').classList.toggle('active', !!p.stealth);
+    $('settingsBtn').classList.toggle('active', !$('settings').hidden);
+    $('viewCard').classList.toggle('active', !isTable);
+    $('viewTable').classList.toggle('active', isTable);
+    $('indices').hidden = !p.showIndices;
+    $('marketDot').classList.toggle('closed', !tradingHours());
+    $('marketState').textContent = p.stealth ? '' : (tradingHours() ? '交易中' : '已休市');
+    syncControls(p);
+
+    var viewName = isTable ? '表格' : '卡片';
+    $('settingsSummary').textContent = viewName + ' · ' +
+      (isTable ? (PRESET_NAMES[p.columnPreset] || '标准列') : '独立布局') + ' · ' +
+      (SCHEME_NAMES[p.colorScheme] || '红涨绿跌') + (p.stealth ? ' · 隐匿' : '');
+    $('groupLayoutHint').textContent = viewName;
+    $('groupColHint').textContent = isTable ? (p.columns || []).length + ' 列' : '仅表格';
+    $('groupPrivacyHint').textContent = p.stealth ? '已开启' : '已关闭';
+    $('groupDataHint').textContent = '每 ' + (p.intervalSec || 10) + ' 秒';
+    $('colCount').textContent = '已选 ' + (p.columns || []).length + ' 列';
+
+    // 卡片专属设置：表格视图下置灰；表格列设置：卡片视图下置灰。
+    $('p-detail').disabled = isTable;
+    $('field-detail').classList.toggle('muted-field', isTable);
+    $('p-showRangeBar').disabled = isTable;
+    $('field-rangeBar').classList.toggle('muted-field', isTable);
+    $('p-columnPreset').disabled = !isTable;
+    $('p-showHeaderLabels').disabled = !isTable;
+    $('field-headerLabels').classList.toggle('muted-field', !isTable);
+    $('colControls').classList.toggle('muted-field', !isTable);
+    $('colAll').disabled = !isTable;
+    $('colNone').disabled = !isTable;
+    $('colOrderReset').disabled = !isTable;
+    var boxes = document.querySelectorAll('[data-col]');
+    for (var i = 0; i < boxes.length; i++) boxes[i].disabled = !isTable;
+  }
+
+  function visibleRows(rows) {
+    var data = rows || [];
+    var mode = prefs.listMode || 'tabs';
+    if (mode === 'positions' || (mode === 'tabs' && activeTab === 'positions')) {
+      return data.filter(function (r) { return Number(r.qty) > 0; });
+    }
+    return data;
+  }
+
+  function renderTabs(rows) {
+    var data = rows || [];
+    var mode = prefs.listMode || 'tabs';
+    var show = mode === 'tabs';
+    $('tabs').hidden = !show;
+    if (show) {
+      $('watchCount').textContent = String(data.length);
+      $('posCount').textContent = String(data.filter(function (r) { return Number(r.qty) > 0; }).length);
+      $('tabWatch').classList.toggle('active', activeTab === 'watchlist');
+      $('tabPos').classList.toggle('active', activeTab === 'positions');
+    }
+    var inPositions = mode === 'positions' || (show && activeTab === 'positions');
+    var sum = $('summary');
+    sum.hidden = !inPositions || prefs.stealth || prefs.profitDisplay === 'hidden';
+    if (!sum.hidden) {
+      var pos = data.filter(function (r) { return Number(r.qty) > 0; });
+      var value = pos.reduce(function (s, r) { return s + r.price * r.qty; }, 0);
+      var profit = pos.reduce(function (s, r) { return s + (r.profit || 0); }, 0);
+      sum.innerHTML =
+        '<div class="cell"><div class="k">持仓只数</div><div class="v num">' + pos.length + '</div></div>' +
+        '<div class="cell"><div class="k">参考市值</div><div class="v num">' + num(value) + '</div></div>' +
+        '<div class="cell"><div class="k">浮动盈亏</div><div class="v num ' + cls(profit) + '">' + signed(profit) + '</div></div>';
+    }
+  }
+
+  function renderIndices(list) {
+    var el = $('indices');
+    el.innerHTML = '';
+    (list || []).forEach(function (it) {
+      var c = cls(it.percent);
+      var d = document.createElement('div');
+      d.className = 'idx';
+      d.innerHTML =
+        '<div class="n">' + esc(it.name) + '</div>' +
+        '<div class="v num ' + c + '">' + num(it.price) + '</div>' +
+        '<div class="p num ' + c + '">' + signed(it.percent) + '% ' + arrow(it.percent) + '</div>';
+      el.appendChild(d);
+    });
+  }
+
+  function colValue(key, r) {
+    switch (key) {
+      case 'change': return { text: signed(r.change), c: cls(r.percent) };
+      case 'prevClose': return { text: num(r.prevClose), c: '' };
+      case 'open': return { text: num(r.open), c: '' };
+      case 'high': return { text: num(r.high), c: '' };
+      case 'low': return { text: num(r.low), c: '' };
+      case 'volume': return { text: num(r.volume, 0), c: '' };
+      case 'cost': return { text: r.cost > 0 ? num(r.cost) : '-', c: '' };
+      case 'qty': return { text: r.qty > 0 ? num(r.qty, 0) : '-', c: '' };
+      case 'profit': return typeof r.profit === 'number'
+        ? { text: prefs.profitDisplay === 'percent' ? signed(r.profitPercent) + '%' : signed(r.profit), c: cls(r.profit) }
+        : { text: '-', c: '' };
+      case 'profitPercent': return typeof r.profitPercent === 'number'
+        ? { text: signed(r.profitPercent) + '%', c: cls(r.profitPercent) }
+        : { text: '-', c: '' };
+      default: return null;
+    }
+  }
+
+  // 卡片专属：日内区间条。轨道左端=今日最低、右端=今日最高，
+  // 灰色竖线=昨收位置，彩色滑块=现价；滑块在昨收左边就是跌、右边就是涨。
+  function rangeHtml(r) {
+    if (prefs.stealth || prefs.showRangeBar === false) return '';
+    var span = Number(r.high) - Number(r.low);
+    if (!(span > 0)) return '';
+    var clamp = function (v) { return Math.max(0, Math.min(100, v)); };
+    var now = clamp((r.price - r.low) / span * 100);
+    var prev = clamp((r.prevClose - r.low) / span * 100);
+    var left = Math.min(now, prev);
+    var width = Math.abs(now - prev);
+    var c = cls(r.percent);
+    var amplitude = Number(r.prevClose) > 0 ? span / Number(r.prevClose) * 100 : 0;
+    var tip = '日内区间：最低 ' + num(r.low) + ' · 现价 ' + num(r.price) + ' · 最高 ' + num(r.high) +
+      '（昨收 ' + num(r.prevClose) + '，振幅 ' + num(amplitude) + '%）';
+    return '<div class="range" title="' + esc(tip) + '">' +
+      '<div class="range-head">' +
+        '<span>日内区间 · 振幅 <b class="num">' + num(amplitude) + '%</b></span>' +
+        '<span>现价 <b class="num ' + c + '">' + num(r.price) + '</b></span>' +
+      '</div>' +
+      '<div class="range-track">' +
+        '<span class="range-fill ' + c + '" style="left:' + left.toFixed(1) + '%;width:' + width.toFixed(1) + '%"></span>' +
+        '<span class="range-prev" style="left:' + prev.toFixed(1) + '%" title="昨收 ' + num(r.prevClose) + '"></span>' +
+        '<span class="range-now ' + c + '" style="left:' + now.toFixed(1) + '%" title="现价 ' + num(r.price) + '"></span>' +
+      '</div>' +
+      '<div class="range-labels">' +
+        '<span>最低 ' + num(r.low) + '</span>' +
+        '<span class="mid">昨收 ' + num(r.prevClose) + '</span>' +
+        '<span>最高 ' + num(r.high) + '</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function kv(k, v, c) {
+    return '<div class="kv"><div class="k">' + esc(k) + '</div>' +
+      '<div class="v num ' + (c || '') + '">' + v + '</div></div>';
+  }
+
+  function detailHtml(r) {
+    var parts = [];
+    parts.push(kv('昨收', num(r.prevClose)));
+    parts.push(kv('成交量(手)', num(r.volume, 0)));
+    if (prefs.detail !== 'minimal') {
+      parts.push(kv('今开', num(r.open)));
+      parts.push(kv('最高', num(r.high)));
+      parts.push(kv('最低', num(r.low)));
+    }
+    if (prefs.detail === 'full' && prefs.profitDisplay !== 'hidden') {
+      if (r.cost > 0) parts.push(kv('成本', num(r.cost)));
+      if (r.qty > 0) parts.push(kv('持仓', num(r.qty, 0)));
+      if (typeof r.profit === 'number') {
+        parts.push(kv('浮动盈亏',
+          prefs.profitDisplay === 'percent' ? signed(r.profitPercent) + '%' : signed(r.profit),
+          cls(r.profit)));
+      }
+    }
+    return '<div class="grid">' + parts.join('') + '</div>';
+  }
+
+  function emptyHint() {
+    $('emptyText').innerHTML = (prefs.listMode === 'positions' ||
+      (prefs.listMode === 'tabs' && activeTab === 'positions'))
+      ? '还没有持仓。<br>切到「自选」，点某行的「持仓」在弹窗里填成本价和数量。'
+      : '这里还没有股票。<br>在上方输入 6 位代码或 sh600519 添加一只。';
+  }
+
+  function renderCards(rows) {
+    var list = $('list');
+    resetTableScroll(); // 切回卡片视图，表格的滚动条监听与拖动状态都没用了
+    list.innerHTML = '';
+    var data = visibleRows(rows);
+    $('empty').hidden = data.length > 0;
+    if (!data.length) emptyHint();
+    data.forEach(function (r) {
+      var stealth = prefs.stealth;
+      var c = cls(r.percent);
+      var name = stealth && prefs.stealthHideNames ? '' : r.name;
+      var posTag = (!stealth && Number(r.qty) > 0 && prefs.profitDisplay !== 'hidden')
+        ? ' <span class="pos-tag">持仓</span>' : '';
+      var price = stealth && prefs.stealthMaskPrice ? '••••' : num(r.price);
+      var change = stealth
+        ? arrow(r.percent) + ' ' + signed(r.percent) + '%'
+        : signed(r.change) + ' <span class="badge ' + c + '">' + signed(r.percent) + '% ' + arrow(r.percent) + '</span>';
+      var open = expanded[r.secid] === 'detail';
+
+      var article = document.createElement('article');
+      article.className = 'row';
+      article.setAttribute('data-secid', r.secid);
+      article.innerHTML =
+        '<div class="row-main">' +
+          '<span class="drag-grip" aria-hidden="true" title="按住上下拖动可调整顺序">⋮⋮</span>' +
+          '<div class="id-block">' +
+            '<div class="code num">' + esc(r.code) + '</div>' +
+            (name ? '<div class="name">' + esc(name) + posTag + '</div>' : '') +
+          '</div>' +
+          '<div class="price-block">' +
+            '<div class="price num ' + c + '">' + price + '</div>' +
+            '<div class="change num ' + c + '">' + change + '</div>' +
+          '</div>' +
+          '<div class="arrow ' + c + '">' + arrow(r.percent) + '</div>' +
+          '<div class="row-actions">' +
+            '<button class="mini" type="button" data-act="detail">全部</button>' +
+            '<button class="mini" type="button" data-act="pos">持仓</button>' +
+            '<button class="mini danger" type="button" data-act="remove" title="删除该自选" aria-label="删除该自选">删除</button>' +
+          '</div>' +
+        '</div>' +
+        rangeHtml(r) +
+        '<div class="detail"' + (open ? '' : ' hidden') + '>' + detailHtml(r) + '</div>';
+
+      article.addEventListener('click', function (e) {
+        if (e.target.closest('.drag-grip')) return; // 抓手上只是拖动，不切换展开
+        var btn = e.target.closest('button[data-act]');
+        if (btn) {
+          var act = btn.getAttribute('data-act');
+          if (act === 'remove') { askRemove(btn, r.secid, r.code); return; }
+          if (act === 'pos') { openPosition(r); return; }
+        }
+        if (e.target.closest('.detail')) return; // 点明细内容不该顺手收起
+        expanded[r.secid] = expanded[r.secid] === 'detail' ? '' : 'detail';
+        renderCards(snapshot ? snapshot.rows : rows);
+      });
+      list.appendChild(article);
+    });
+  }
+
+  // 表格显示的列：先按用户拖动后的顺序排列，再只取被勾选的那些。
+  function orderedColumns() {
+    var picked = prefs.columns || [];
+    return (prefs.columnOrder || []).filter(function (k) { return picked.indexOf(k) >= 0; });
+  }
+
+  function clearDropMarks(wrap) {
+    var all = wrap.querySelectorAll('th.drop-before, th.drop-after');
+    for (var i = 0; i < all.length; i++) {
+      all[i].classList.remove('drop-before');
+      all[i].classList.remove('drop-after');
+    }
+  }
+
+  function dropSide(e, th) {
+    var box = th.getBoundingClientRect();
+    return (e.clientX - box.left) < box.width / 2 ? 'before' : 'after';
+  }
+
+  // 把 from 列移到 to 列的前面或后面，并记住顺序。
+  function moveColumn(from, to, side) {
+    if (!from || !to || from === to) return;
+    var order = (prefs.columnOrder || []).slice();
+    var i = order.indexOf(from);
+    if (i < 0) return;
+    order.splice(i, 1);
+    var j = order.indexOf(to);
+    if (j < 0) return;
+    if (side === 'after') j += 1;
+    order.splice(j, 0, from);
+    var next = collectPrefs();
+    next.columnOrder = order;
+    commitPrefs(next);
+  }
+
+  // ---- 列表拖动排序（自选 / 持仓）----
+  // 和表头拖拽同一套思路：自己算落点，拖动期间挂起重绘，松手才提交。
+  // 只在「自选顺序」下生效——按涨跌幅 / 代码排序时展示顺序由宿主算，拖了也会被打回去。
+  var rowDrag = null;
+
+  function bindListDrag(container) {
+    container.addEventListener('mousedown', function (e) {
+      if (e.button !== 0) return;
+      if (!prefs || prefs.sortBy !== 'custom') return;
+      if (e.target.closest('button, input, select, textarea, a')) return;
+      var row = e.target.closest('[data-secid]');
+      if (!row || !container.contains(row)) return;
+      rowDrag = {
+        row: row, secid: row.getAttribute('data-secid'),
+        startX: e.clientX, startY: e.clientY,
+        active: false, over: null, side: null, line: null
+      };
+      document.addEventListener('mousemove', rowDragMove, true);
+      document.addEventListener('mouseup', rowDragEnd, true);
+      document.addEventListener('keydown', rowDragKey, true);
+      window.addEventListener('blur', rowDragAbort);
+    });
+  }
+
+  function rowDragUnbind() {
+    document.removeEventListener('mousemove', rowDragMove, true);
+    document.removeEventListener('mouseup', rowDragEnd, true);
+    document.removeEventListener('keydown', rowDragKey, true);
+    window.removeEventListener('blur', rowDragAbort);
+  }
+
+  function rowDragReset() {
+    var d = rowDrag;
+    rowDrag = null;
+    rowDragUnbind();
+    if (d) {
+      d.row.classList.remove('dragging');
+      if (d.line && d.line.parentNode) d.line.parentNode.removeChild(d.line);
+    }
+    body.classList.remove('row-dragging');
+    return d;
+  }
+
+  function rowDragKey(e) {
+    if (e.key === 'Escape') rowDragAbort();
+  }
+
+  function rowDragAbort() {
+    rowDragReset();
+    flushPendingRows();
+  }
+
+  // 指针下是哪一行（卡片与表格通用）
+  function rowAt(x, y) {
+    var el = document.elementFromPoint(x, y);
+    var row = el && el.closest ? el.closest('[data-secid]') : null;
+    return row && $('list').contains(row) ? row : null;
+  }
+
+  // 落点插入线：画在目标行的上沿 / 下沿，横跨整行
+  function showRowLine(line, row, side) {
+    if (!line) return;
+    var lr = $('list').getBoundingClientRect();
+    var r = row.getBoundingClientRect();
+    var y = (side === 'before' ? r.top : r.bottom) - lr.top;
+    line.style.display = 'block';
+    line.style.top = Math.round(y - 1) + 'px';
+    line.style.left = Math.round(Math.max(0, r.left - lr.left) + 1) + 'px';
+    line.style.width = Math.round(Math.min(r.width, lr.width) - 2) + 'px';
+  }
+
+  // 拖到面板上下边缘时让页面跟着滚，长列表也能拖到看不见的位置
+  function autoScrollPage(e) {
+    var page = document.scrollingElement || document.documentElement;
+    if (!page) return;
+    if (e.clientY < 40) page.scrollTop -= 12;
+    else if (e.clientY > (window.innerHeight || 0) - 40) page.scrollTop += 12;
+  }
+
+  function rowDragMove(e) {
+    var d = rowDrag;
+    if (!d) return;
+    if (!d.active) {
+      // 移动超过 4px 才算拖动，普通点击仍然只是展开 / 收起卡片
+      if (Math.abs(e.clientY - d.startY) < 4 && Math.abs(e.clientX - d.startX) < 4) return;
+      d.active = true;
+      d.row.classList.add('dragging');
+      body.classList.add('row-dragging');
+      d.line = document.createElement('div');
+      d.line.className = 'rowline';
+      $('list').appendChild(d.line);
+    }
+    e.preventDefault();
+    autoScrollPage(e);
+    var over = rowAt(e.clientX, e.clientY);
+    d.over = null;
+    d.side = null;
+    if (!over || over === d.row) {
+      if (d.line) d.line.style.display = 'none';
+      return;
+    }
+    var box = over.getBoundingClientRect();
+    d.side = (e.clientY - box.top) < box.height / 2 ? 'before' : 'after';
+    d.over = over.getAttribute('data-secid');
+    showRowLine(d.line, over, d.side);
+  }
+
+  function swallowClick(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
+  function rowDragEnd(e) {
+    var d = rowDragReset();
+    if (!d) return;
+    if (!d.active) { flushPendingRows(); return; }
+    // 拖动松开后浏览器还会补一个 click，别让它顺手把卡片展开 / 收起
+    document.addEventListener('click', swallowClick, true);
+    setTimeout(function () { document.removeEventListener('click', swallowClick, true); }, 0);
+    e.preventDefault();
+    e.stopPropagation();
+    if (d.over && d.over !== d.secid) {
+      pendingRows = null;   // moveRow 内部会按新顺序重绘
+      moveRow(d.secid, d.over, d.side);
+      return;
+    }
+    flushPendingRows();
+  }
+
+  // 把 from 这只挪到 to 的前 / 后，并让宿主把顺序持久化。
+  function moveRow(from, to, side) {
+    if (!snapshot || !snapshot.rows || !from || !to || from === to) return;
+    var rows = snapshot.rows;
+    var order = rows.map(function (r) { return r.secid; });
+    var i = order.indexOf(from);
+    if (i < 0) return;
+    order.splice(i, 1);
+    var j = order.indexOf(to);
+    if (j < 0) return;
+    if (side === 'after') j += 1;
+    order.splice(j, 0, from);
+    // 先在本机快照里按新顺序排一遍，界面立刻跟手；再把同样的顺序交给宿主持久化。
+    var byId = {};
+    rows.forEach(function (r) { byId[r.secid] = r; });
+    var next = [];
+    order.forEach(function (id) {
+      if (byId[id]) { next.push(byId[id]); delete byId[id]; }
+    });
+    Object.keys(byId).forEach(function (id) { next.push(byId[id]); });
+    snapshot.rows = next;
+    renderTabs(next);
+    renderRows(next);
+    send({ type: 'reorder', order: order });
+  }
+
+  // ---- 表头拖动排序 ----
+  // 不用原生 HTML5 拖拽（WebView 里 dragover/drop 经常不触发），改用鼠标事件自己算落点；
+  // 拖动期间挂起列表重绘，否则每 10 秒一次的刷新会把正在拖动的表头整个换掉。
+  var colDrag = null;
+  var pendingRows = null;
+
+  function bindColumnDrag(wrap) {
+    wrap.addEventListener('mousedown', function (e) {
+      if (e.button !== 0) return;
+      var th = e.target.closest ? e.target.closest('th[data-colkey]') : null;
+      if (!th) return;
+      colDrag = {
+        wrap: wrap, th: th, key: th.getAttribute('data-colkey'),
+        startX: e.clientX, startY: e.clientY,
+        active: false, over: null, side: null
+      };
+      document.addEventListener('mousemove', colDragMove, true);
+      document.addEventListener('mouseup', colDragEnd, true);
+      document.addEventListener('keydown', colDragKey, true);
+      window.addEventListener('blur', colDragAbort);
+    });
+  }
+
+  function colDragUnbind() {
+    document.removeEventListener('mousemove', colDragMove, true);
+    document.removeEventListener('mouseup', colDragEnd, true);
+    document.removeEventListener('keydown', colDragKey, true);
+    window.removeEventListener('blur', colDragAbort);
+  }
+
+  // 清掉拖动状态与落点标记；返回被清掉的拖动上下文。
+  function colDragReset() {
+    var d = colDrag;
+    colDrag = null;
+    colDragUnbind();
+    if (d) {
+      d.th.classList.remove('dragging');
+      clearDropMarks(d.wrap);
+    }
+    body.classList.remove('col-dragging');
+    return d;
+  }
+
+  // 拖动期间被压下的刷新，收手后补渲染一次。
+  function flushPendingRows() {
+    if (!pendingRows) return;
+    var rows = pendingRows;
+    pendingRows = null;
+    renderRows(rows);
+  }
+
+  function colDragKey(e) {
+    if (e.key === 'Escape') colDragAbort();
+  }
+
+  function colDragAbort() {
+    colDragReset();
+    flushPendingRows();
+  }
+
+  function colDragMove(e) {
+    var d = colDrag;
+    if (!d) return;
+    if (!d.active) {
+      // 移动超过 4px 才算拖动，避免把普通点击误判成拖拽。
+      if (Math.abs(e.clientX - d.startX) < 4 && Math.abs(e.clientY - d.startY) < 4) return;
+      d.active = true;
+      d.th.classList.add('dragging');
+      body.classList.add('col-dragging');
+    }
+    e.preventDefault();
+    var el = document.elementFromPoint(e.clientX, e.clientY);
+    var over = el && el.closest ? el.closest('th[data-colkey]') : null;
+    clearDropMarks(d.wrap);
+    d.over = null;
+    d.side = null;
+    if (over && over !== d.th) {
+      d.side = dropSide(e, over);
+      d.over = over.getAttribute('data-colkey');
+      over.classList.add(d.side === 'before' ? 'drop-before' : 'drop-after');
+    }
+    // 拖到表格左右边缘时自动横向滚动，方便把列拖到当前看不见的位置。
+    var box = d.wrap.getBoundingClientRect();
+    if (e.clientX > box.right - 26) d.wrap.scrollLeft += 14;
+    else if (e.clientX < box.left + 26) d.wrap.scrollLeft -= 14;
+  }
+
+  function colDragEnd(e) {
+    var d = colDragReset();
+    if (!d) return;
+    if (d.active && d.over) {
+      e.preventDefault();
+      e.stopPropagation();
+      moveColumn(d.key, d.over, d.side); // 内部会按最新快照重绘，旧数据不必再渲染
+      pendingRows = null;
+      return;
+    }
+    flushPendingRows();
+  }
+
+  function renderTable(rows) {
+    var list = $('list');
+    var data = visibleRows(rows);
+    $('empty').hidden = data.length > 0;
+    if (!data.length) emptyHint();
+    var cols = prefs.stealth ? [] : orderedColumns();
+    var html = '<div class="tablescroll"><div class="tablewrap"><table>';
+    if (prefs.showHeaderLabels !== false) {
+      html += '<thead><tr><th>代码</th><th>名称</th><th>现价</th><th>涨跌幅</th>';
+      cols.forEach(function (k) {
+        html += '<th class="draggable" data-colkey="' + esc(k) + '" title="按住表头左右拖动可调整列顺序">' +
+          '<span class="grip" aria-hidden="true">⋮⋮</span>' + esc(COLUMN_LABELS[k] || k) + '</th>';
+      });
+      html += '<th></th></tr></thead>';
+    }
+    html += '<tbody>';
+
+    data.forEach(function (r) {
+      var stealth = prefs.stealth;
+      var c = cls(r.percent);
+      var name = stealth && prefs.stealthHideNames ? '' : r.name;
+      var price = stealth && prefs.stealthMaskPrice ? '••••' : num(r.price);
+      html += '<tr data-secid="' + esc(r.secid) + '">';
+      html += '<td class="num">' + esc(r.code) + '</td>';
+      html += '<td>' + esc(name) + '</td>';
+      html += '<td class="num ' + c + '">' + price + '</td>';
+      html += '<td class="num ' + c + '"><span class="badge">' + signed(r.percent) + '% ' + arrow(r.percent) + '</span></td>';
+      cols.forEach(function (k) {
+        var v = colValue(k, r) || { text: '-', c: '' };
+        html += '<td class="num ' + v.c + '">' + v.text + '</td>';
+      });
+      html += '<td class="actions">' +
+        '<button class="mini" type="button" data-act="pos" title="填写成本价与持仓数量">持仓</button> ' +
+        '<button class="mini danger" type="button" data-act="remove" title="删除该自选" aria-label="删除该自选">删除</button></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>' +
+      '<div class="hscroll" role="presentation"><div class="hscroll-thumb"></div></div></div>';
+    list.innerHTML = html;
+
+    var source = snapshot ? snapshot.rows : rows;
+    var wrap = list.querySelector('.tablewrap');
+
+    wrap.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      var tr = btn.closest('tr');
+      var secid = tr && tr.getAttribute('data-secid');
+      if (!secid) return;
+      var act = btn.getAttribute('data-act');
+      var row = (source || []).filter(function (x) { return x.secid === secid; })[0] || {};
+      if (act === 'remove') askRemove(btn, secid, row.code || secid.split('.')[1]);
+      else if (act === 'pos') openPosition(row);
+    });
+
+    // 表头拖动排序：只有可选列可拖，代码 / 名称 / 现价 / 涨跌幅与操作列固定。
+    bindColumnDrag(wrap);
+    bindTableScroll(wrap);
+  }
+
+  // 表格横向滚动：原生滚动条在 WebView 里悬停时会跳样式（会「消失」），所以整个隐藏掉，
+  // 用一条自绘的滚动条替代——外观完全可控，任何主题下都常显、可拖、可点轨道跳转。
+  // 另外滚轮在表格上可直接横推（页面本身还要上下滚时不抢），右边缘还有内容时压一道内阴影。
+  var hScrollResize = null;   // 当前表格的 resize 监听
+  var hScrollDragOff = null;  // 拖动未结束时用于强制收尾
+
+  // 表格重绘前先清掉上一轮的监听，避免越攒越多（也防止拖动被重建打断后卡住）。
+  function resetTableScroll() {
+    if (hScrollResize) { window.removeEventListener('resize', hScrollResize); hScrollResize = null; }
+    if (hScrollDragOff) { hScrollDragOff(); hScrollDragOff = null; }
+  }
+
+  function bindTableScroll(wrap) {
+    resetTableScroll();
+    var bar = wrap.parentNode.querySelector('.hscroll');
+    var thumb = bar.querySelector('.hscroll-thumb');
+    var drag = null;
+
+    function sync() {
+      var gap = wrap.scrollWidth - wrap.clientWidth;
+      var track = bar.clientWidth;
+      var overflow = gap > 2 && track > 0;
+      bar.classList.toggle('off', !overflow);
+      wrap.classList.toggle('hscroll-on', overflow);
+      wrap.classList.toggle('more-right', overflow && wrap.scrollLeft < gap - 2);
+      wrap.classList.toggle('more-left', wrap.scrollLeft > 2);
+      if (!overflow) return;
+      var w = Math.max(26, Math.round(track * wrap.clientWidth / wrap.scrollWidth));
+      var x = (track - w) * (wrap.scrollLeft / gap);
+      thumb.style.width = w + 'px';
+      thumb.style.transform = 'translateX(' + Math.round(x) + 'px)';
+    }
+
+    wrap.addEventListener('scroll', sync);
+
+    // 拖拇指
+    thumb.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      drag = {
+        x: e.clientX,
+        left: wrap.scrollLeft,
+        span: bar.clientWidth - thumb.offsetWidth,
+        gap: wrap.scrollWidth - wrap.clientWidth
+      };
+      thumb.classList.add('active');
+      document.addEventListener('mousemove', onMove, true);
+      document.addEventListener('mouseup', onUp, true);
+      hScrollDragOff = off;
+    });
+
+    function onMove(e) {
+      if (!drag) return;
+      if (drag.span > 0) wrap.scrollLeft = drag.left + (e.clientX - drag.x) / drag.span * drag.gap;
+      sync();
+    }
+
+    function off() {
+      drag = null;
+      thumb.classList.remove('active');
+      document.removeEventListener('mousemove', onMove, true);
+      document.removeEventListener('mouseup', onUp, true);
+      hScrollDragOff = null;
+    }
+
+    function onUp() { off(); }
+
+    // 点空白轨道：把拇指中心移到点击位置（到头则贴边）
+    bar.addEventListener('mousedown', function (e) {
+      if (e.target === thumb) return;
+      var box = bar.getBoundingClientRect();
+      var track = box.width;
+      var w = thumb.offsetWidth;
+      var gap = wrap.scrollWidth - wrap.clientWidth;
+      var x = (e.clientX - box.left) - w / 2;
+      var frac = track > w ? Math.max(0, Math.min(1, x / (track - w))) : 0;
+      wrap.scrollLeft = frac * gap;
+      sync();
+    });
+
+    wrap.addEventListener('wheel', function (e) {
+      if (e.shiftKey || e.ctrlKey || e.metaKey) return; // Shift+滚轮 交给浏览器原生横滚
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      var gap = wrap.scrollWidth - wrap.clientWidth;
+      if (gap <= 2 || !e.deltaY) return;
+      // 已经滚到头就别拦，让页面继续上下滚。
+      if ((e.deltaY > 0 && wrap.scrollLeft >= gap - 2) || (e.deltaY < 0 && wrap.scrollLeft <= 2)) return;
+      var page = document.scrollingElement || document.body;
+      if (page.scrollHeight > page.clientHeight + 2) return; // 页面要纵向滚动时保持原生行为
+      wrap.scrollLeft += e.deltaY;
+      e.preventDefault();
+      sync();
+    }, { passive: false });
+
+    // 量出第一列实际宽度，供第二列的 sticky left 对齐（字号 / 语言变化都不会错位）
+    function syncFrozen() {
+      var cell = wrap.querySelector('thead th:nth-child(1)') || wrap.querySelector('tbody td:nth-child(1)');
+      if (!cell) return;
+      var w = cell.getBoundingClientRect().width;
+      if (w > 0) wrap.style.setProperty('--col1w', Math.round(w) + 'px');
+    }
+
+    hScrollResize = function () { syncFrozen(); sync(); };
+    window.addEventListener('resize', hScrollResize);
+    requestAnimationFrame(function () { syncFrozen(); sync(); });
+    syncFrozen();
+    sync();
+  }
+
+  function renderRows(rows) {
+    if ((colDrag && colDrag.active) || (rowDrag && rowDrag.active)) { pendingRows = rows; return; }
+    if ((prefs.viewStyle || 'card') === 'table') renderTable(rows);
+    else renderCards(rows);
+  }
+
+  // 保存持仓后立刻在本机快照里反映出来：即使宿主回包慢或失败，用户也能马上看到结果。
+  function optimisticPosition(secid, cost, qty) {
+    var src = snapshot && snapshot.rows ? snapshot.rows : null;
+    if (!src) return;
+    src.forEach(function (r) {
+      if (r.secid !== secid) return;
+      r.cost = cost;
+      r.qty = qty;
+      var has = cost > 0 && qty > 0;
+      r.profit = has ? (r.price - cost) * qty : null;
+      r.profitPercent = has ? (r.price - cost) / cost * 100 : null;
+    });
+    renderTabs(src);
+    renderRows(src);
+  }
+
+  // ---- 删除二次确认（卡片与表格共用）----
+  var armTimer = null;
+
+  function disarm(btn) {
+    if (!btn) return;
+    btn.removeAttribute('data-armed');
+    btn.classList.remove('armed');
+    btn.textContent = '删除';
+  }
+
+  // 误触保护：第一次点只进入待确认（按钮变红显示「确认删除」），3 秒内不再点就自动复原。
+  function askRemove(btn, secid, code) {
+    if (btn.getAttribute('data-armed') === '1') {
+      if (armTimer) { clearTimeout(armTimer); armTimer = null; }
+      send({ type: 'remove', secid: secid });
+      optimisticRemove(secid);
+      toast('已删除 ' + code, 'ok');
+      return;
+    }
+    var others = document.querySelectorAll('button[data-act="remove"][data-armed="1"]');
+    for (var i = 0; i < others.length; i++) disarm(others[i]);
+    btn.setAttribute('data-armed', '1');
+    btn.classList.add('armed');
+    btn.textContent = '确认删除';
+    if (armTimer) clearTimeout(armTimer);
+    armTimer = setTimeout(function () { disarm(btn); armTimer = null; }, 3000);
+  }
+
+  function optimisticRemove(secid) {
+    if (!hasHost || !snapshot || !snapshot.rows) return;
+    snapshot.rows = snapshot.rows.filter(function (r) { return r.secid !== secid; });
+    renderTabs(snapshot.rows);
+    renderRows(snapshot.rows);
+  }
+
+  // ---- 持仓小弹窗 ----
+  var posTarget = null;
+
+  function openPosition(r) {
+    posTarget = r;
+    $('posTitle').textContent = (r.name && r.name !== '-') ? r.name : r.code;
+    $('posSub').textContent = r.code + (Number(r.qty) > 0
+      ? ' · 当前持仓 ' + num(r.qty, 0) + ' 股'
+      : ' · 还没有填写持仓');
+    $('posPrice').textContent = prefs.stealth && prefs.stealthMaskPrice ? '••••' : num(r.price);
+    $('posPrice').className = 'p num ' + cls(r.percent);
+    $('posChange').textContent = signed(r.change) + '　' + signed(r.percent) + '% ' + arrow(r.percent);
+    $('posChange').className = 'c num ' + cls(r.percent);
+    $('posCost').value = r.cost ? r.cost : '';
+    $('posQty').value = r.qty ? r.qty : '';
+    $('posModal').hidden = false;
+    renderPosPreview();
+    setTimeout(function () { $('posCost').focus(); $('posCost').select(); }, 0);
+  }
+
+  function closePosition() {
+    $('posModal').hidden = true;
+    posTarget = null;
+  }
+
+  // 弹窗里随输入实时算市值与盈亏，不用先保存再看结果。
+  function renderPosPreview() {
+    var r = posTarget;
+    if (!r) return;
+    var cost = Number($('posCost').value || 0);
+    var qty = Number($('posQty').value || 0);
+    var lines;
+    if (cost > 0 && qty > 0) {
+      var value = r.price * qty;
+      var profit = (r.price - cost) * qty;
+      var pct = (r.price - cost) / cost * 100;
+      lines = [
+        ['参考市值', num(value), ''],
+        ['浮动盈亏', signed(profit), cls(profit)],
+        ['盈亏比例', signed(pct) + '%', cls(pct)]
+      ];
+    } else {
+      lines = [['浮盈浮亏', '填好成本价与数量后自动计算', 'muted']];
+    }
+    $('posPreview').innerHTML = lines.map(function (it) {
+      return '<div class="l"><span>' + esc(it[0]) + '</span>' +
+        '<span class="num ' + it[2] + '">' + esc(it[1]) + '</span></div>';
+    }).join('');
+  }
+
+  function savePosition(clear) {
+    var r = posTarget;
+    if (!r) return;
+    var cost = clear ? 0 : Number($('posCost').value || 0);
+    var qty = clear ? 0 : Number($('posQty').value || 0);
+    send({ type: 'position', secid: r.secid, code: r.code, cost: cost, qty: qty });
+    if (hasHost) optimisticPosition(r.secid, cost, qty);
+    closePosition();
+    toast(clear ? '持仓已清空' : '持仓已保存', 'ok');
+  }
+
+  function render(msg) {
+    snapshot = msg;
+    var merged = Object.assign({}, prefs || {}, msg.prefs || {});
+    applyPrefs(merged);
+    renderTabs(msg.rows);
+    renderIndices(msg.indices);
+    renderRows(msg.rows);
+    $('status').textContent = msg.message || (msg.updatedAt ? '更新于 ' + msg.updatedAt : '已更新');
+    $('source').textContent = (msg.source || '') + ' · 每 ' + (msg.intervalSec || 10) + ' 秒';
+    notifyMessage(msg.message);
+    schedule();
+  }
+
+  function schedule() {
+    if (timer) clearInterval(timer);
+    var secs = Math.max(3, Math.min(300, Number(prefs.intervalSec) || 10));
+    timer = setInterval(function () {
+      var quiet = prefs.quietHours && !tradingHours();
+      if (!quiet || Date.now() - lastPoll >= 60000) {
+        lastPoll = Date.now();
+        send({ type: 'refresh' });
+      }
+    }, secs * 1000);
+  }
+
+  // ---- 预览用的本地宿主 ----
+  function normalizeCode(input) {
+    var s = String(input || '').trim().toLowerCase().replace(/\s/g, '');
+    if (/^[01]\.\d{6}$/.test(s)) return s;
+    var m = /^(sh|sz)?(\d{6})$/.exec(s);
+    if (!m) return null;
+    var code = m[2];
+    var market = m[1] === 'sh' ? '1' : (m[1] === 'sz' ? '0' : (code.charAt(0) === '6' || code.charAt(0) === '9' ? '1' : '0'));
+    return market + '.' + code;
+  }
+
+  function localSnapshot(message) {
+    return {
+      type: 'snapshot',
+      rows: JSON.parse(JSON.stringify(local.rows)),
+      indices: JSON.parse(JSON.stringify(local.indices)),
+      updatedAt: new Date().toTimeString().slice(0, 8),
+      source: hasHost ? '东方财富（公开接口，轮询）' : '演示数据（本地预览）',
+      intervalSec: local.prefs.intervalSec,
+      prefs: JSON.parse(JSON.stringify(local.prefs)),
+      message: message || ''
+    };
+  }
+
+  function handleLocal(msg) {
+    switch (msg.type) {
+      case 'init':
+      case 'refresh':
+        render(localSnapshot(msg.type === 'refresh' ? '已刷新（演示数据）' : ''));
+        break;
+      case 'prefs':
+        Object.keys(msg.patch || {}).forEach(function (k) { local.prefs[k] = msg.patch[k]; });
+        render(localSnapshot('设置已保存'));
+        break;
+      case 'toggle-stealth':
+        local.prefs.stealth = !local.prefs.stealth;
+        render(localSnapshot(local.prefs.stealth ? '隐匿模式已开启' : '隐匿模式已关闭'));
+        break;
+      case 'add':
+        var secid = normalizeCode(msg.code);
+        if (!secid) { render(localSnapshot('代码格式不对：请输入 6 位数字，或 sh600519')); return; }
+        if (local.rows.some(function (r) { return r.secid === secid; })) {
+          render(localSnapshot('已经在自选里了')); return;
+        }
+        var code = secid.split('.')[1];
+        local.rows.push({
+          secid: secid, code: code, name: '新增 ' + code,
+          price: 10 + (Number(code) % 7), change: 0.12, percent: 1.2,
+          open: 10, high: 10.5, low: 9.8, prevClose: 9.88, volume: 12345,
+          cost: 0, qty: 0, profit: null, profitPercent: null
+        });
+        render(localSnapshot('已添加 ' + code));
+        break;
+      case 'remove':
+        local.rows = local.rows.filter(function (r) { return r.secid !== msg.secid; });
+        render(localSnapshot('已删除'));
+        break;
+      case 'reorder':
+        var byId = {};
+        local.rows.forEach(function (r) { byId[r.secid] = r; });
+        var next = [];
+        (msg.order || []).forEach(function (id) {
+          if (byId[id]) { next.push(byId[id]); delete byId[id]; }
+        });
+        Object.keys(byId).forEach(function (id) { next.push(byId[id]); });
+        local.rows = next;
+        render(localSnapshot(''));
+        break;
+      case 'position':
+        local.rows.forEach(function (r) {
+          if (r.secid !== msg.secid && r.code !== msg.code) return;
+          r.cost = Number(msg.cost) || 0;
+          r.qty = Number(msg.qty) || 0;
+          var has = r.cost > 0 && r.qty > 0;
+          r.profit = has ? (r.price - r.cost) * r.qty : null;
+          r.profitPercent = has ? (r.price - r.cost) / r.cost * 100 : null;
+        });
+        render(localSnapshot('持仓已保存到本机'));
+        break;
+    }
+  }
+
+  function commitPrefs(next, label) {
+    applyPrefs(next);
+    renderTabs(snapshot ? snapshot.rows : []);
+    renderRows(snapshot ? snapshot.rows : []);
+    send({ type: 'prefs', patch: next });
+    if (label) toast(label, 'ok');
+  }
+
+  function setAllColumns(on) {
+    var boxes = document.querySelectorAll('[data-col]');
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = on;
+    $('p-columnPreset').value = 'custom';
+    commitPrefs(collectPrefs());
+  }
+
+  // ---- 事件绑定 ----
+  // 持仓弹窗：Enter 保存、Esc 关闭、点遮罩关闭，输入时实时预览市值与盈亏。
+  $('posModal').addEventListener('click', function (e) {
+    if (e.target === $('posModal')) { closePosition(); return; }
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.id === 'posSave') savePosition(false);
+    else if (btn.id === 'posClear') savePosition(true);
+    else if (btn.id === 'posCancel' || btn.id === 'posClose') closePosition();
+  });
+  $('posModal').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); savePosition(false); }
+    else if (e.key === 'Escape') { e.preventDefault(); closePosition(); }
+  });
+  $('posCost').addEventListener('input', renderPosPreview);
+  $('posQty').addEventListener('input', renderPosPreview);
+  bindListDrag($('list'));
+
+  $('addBtn').addEventListener('click', function () {
+    var raw = $('code').value.trim();
+    if (!raw) { toast('请先输入代码', 'error'); return; }
+    var secid = normalizeCode(raw);
+    if (!secid) { toast('代码格式不对：请输入 6 位数字，或 sh600519', 'error'); return; }
+    if (snapshot && (snapshot.rows || []).some(function (r) { return r.secid === secid; })) {
+      toast('已经在自选里了', 'error');
+      return;
+    }
+    send({ type: 'add', code: raw });
+    $('code').value = '';
+  });
+  $('code').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') $('addBtn').click();
+  });
+  // 刷新只让按钮转一下、页脚状态跟着更新，不再弹提示：没有信息量的提示最打扰。
+  $('refreshBtn').addEventListener('click', function () {
+    lastPoll = Date.now();
+    var b = $('refreshBtn');
+    b.classList.remove('spin');
+    void b.offsetWidth;
+    b.classList.add('spin');
+    setTimeout(function () { b.classList.remove('spin'); }, 600);
+    send({ type: 'refresh' });
+  });
+  $('stealthBtn').addEventListener('click', function () {
+    var next = collectPrefs();
+    next.stealth = !prefs.stealth;
+    applyPrefs(next);
+    send(hasHost ? { type: 'prefs', patch: { stealth: next.stealth } } : { type: 'toggle-stealth' });
+    renderRows(snapshot ? snapshot.rows : []);
+    toast(next.stealth ? '隐匿模式已开启' : '隐匿模式已关闭', 'ok');
+  });
+  $('settingsBtn').addEventListener('click', function () {
+    $('settings').hidden = !$('settings').hidden;
+    $('settingsBtn').classList.toggle('active', !$('settings').hidden);
+  });
+  $('closeSettings').addEventListener('click', function () {
+    $('settings').hidden = true;
+    $('settingsBtn').classList.remove('active');
+  });
+  $('resetPrefs').addEventListener('click', function () {
+    var defaults = JSON.parse(JSON.stringify(DEMO_PREFS));
+    applyPrefs(defaults);
+    commitPrefs(collectPrefs(), '已恢复默认设置');
+  });
+  $('colAll').addEventListener('click', function () { setAllColumns(true); });
+  $('colNone').addEventListener('click', function () { setAllColumns(false); });
+  $('colOrderReset').addEventListener('click', function () {
+    var next = collectPrefs();
+    next.columnOrder = PRESETS.full.slice();
+    commitPrefs(next);
+  });
+  $('settings').addEventListener('change', function (e) {
+    var isCol = e.target.hasAttribute('data-col');
+    if (!isCol && !e.target.hasAttribute('data-pref')) return;
+    if (isCol) {
+      $('p-columnPreset').value = 'custom';
+    } else if (e.target.id === 'p-columnPreset' && e.target.value !== 'custom') {
+      var cols = PRESETS[e.target.value] || PRESETS.normal;
+      var boxes = document.querySelectorAll('[data-col]');
+      for (var i = 0; i < boxes.length; i++) {
+        boxes[i].checked = cols.indexOf(boxes[i].getAttribute('data-col')) >= 0;
+      }
+    }
+    commitPrefs(collectPrefs());
+  });
+  $('viewSwitch').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-view]');
+    if (!btn) return;
+    var style = btn.getAttribute('data-view');
+    var next = collectPrefs();
+    next.viewStyle = style;
+    applyPrefs(next);
+    renderTabs(snapshot ? snapshot.rows : []);
+    renderRows(snapshot ? snapshot.rows : []);
+    send({ type: 'prefs', patch: { viewStyle: style } });
+  });
+  $('tabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-tab]');
+    if (!btn) return;
+    activeTab = btn.getAttribute('data-tab');
+    renderTabs(snapshot ? snapshot.rows : []);
+    renderRows(snapshot ? snapshot.rows : []);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (hasHost) return;
+    if (e.altKey && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+      e.preventDefault();
+      $('stealthBtn').click();
+    }
+  });
+
+  if (hasHost && window.openidea.onMessage) {
+    window.openidea.onMessage(function (text) {
+      var msg;
+      try { msg = JSON.parse(text); } catch (err) { return; }
+      if (msg.type === 'snapshot') render(msg);
+    });
+    send({ type: 'init' });
+    lastPoll = Date.now();
+  } else {
+    handleLocal({ type: 'init' });
+  }
+})();
+</script>
+</body>
+</html>

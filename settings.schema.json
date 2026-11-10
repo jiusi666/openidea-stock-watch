@@ -1,0 +1,114 @@
+{
+  "properties": {
+    "colorScheme": {
+      "type": "string",
+      "title": "涨跌配色（cn 红涨绿跌 / us 绿涨红跌 / mono 无颜色）",
+      "enum": ["cn", "us", "mono"],
+      "default": "cn"
+    },
+    "stealth": {
+      "type": "boolean",
+      "title": "隐匿模式（去色、仅箭头、压缩信息）",
+      "default": false
+    },
+    "stealthHideNames": {
+      "type": "boolean",
+      "title": "隐匿时隐藏股票名称",
+      "default": true
+    },
+    "stealthMaskPrice": {
+      "type": "boolean",
+      "title": "隐匿时遮住绝对价格",
+      "default": true
+    },
+    "statusBarMode": {
+      "type": "string",
+      "title": "状态栏内容（index 上证 / profit 持仓盈亏 / hidden 隐藏）",
+      "enum": ["index", "profit", "hidden"],
+      "default": "index"
+    },
+    "density": {
+      "type": "string",
+      "title": "列表密度（compact 紧凑 / comfortable 舒展）",
+      "enum": ["compact", "comfortable"],
+      "default": "compact"
+    },
+    "fontSize": {
+      "type": "string",
+      "title": "字号（small / normal / large）",
+      "enum": ["small", "normal", "large"],
+      "default": "normal"
+    },
+    "detail": {
+      "type": "string",
+      "title": "行情明细（minimal / normal / full）",
+      "enum": ["minimal", "normal", "full"],
+      "default": "normal"
+    },
+    "showIndices": {
+      "type": "boolean",
+      "title": "显示大盘指数条",
+      "default": true
+    },
+    "listMode": {
+      "type": "string",
+      "title": "列表组织（tabs 自选/持仓分页 / all 合并列表 / positions 仅持仓）",
+      "enum": ["tabs", "all", "positions"],
+      "default": "tabs"
+    },
+    "viewStyle": {
+      "type": "string",
+      "title": "列表形式（card 卡片 / table 表格，表格直接铺开所有列、无需点明细）",
+      "enum": ["card", "table"],
+      "default": "card"
+    },
+    "columnPreset": {
+      "type": "string",
+      "title": "显示列预设（compact / normal / full / custom 自定义勾选）",
+      "enum": ["compact", "normal", "full", "custom"],
+      "default": "normal"
+    },
+    "showHeaderLabels": {
+      "type": "boolean",
+      "title": "表格显示列标题（关掉后表头隐藏，更紧凑）",
+      "default": true
+    },
+    "showRangeBar": {
+      "type": "boolean",
+      "title": "卡片显示日内区间条（最低—最高区间、昨收与现价位置）",
+      "default": true
+    },
+    "intervalSec": {
+      "type": "integer",
+      "title": "刷新间隔（秒）",
+      "default": 10
+    },
+    "sortBy": {
+      "type": "string",
+      "title": "排序（custom 自选顺序，可拖动排序 / percent 涨跌幅 / code 代码）",
+      "enum": ["custom", "percent", "code"],
+      "default": "custom"
+    },
+    "profitDisplay": {
+      "type": "string",
+      "title": "盈亏显示（amount 金额 / percent 百分比 / hidden 隐藏）",
+      "enum": ["amount", "percent", "hidden"],
+      "default": "amount"
+    },
+    "alertPercent": {
+      "type": "number",
+      "title": "涨跌幅提醒阈值（%，0 为关闭）",
+      "default": 0
+    },
+    "quietHours": {
+      "type": "boolean",
+      "title": "非交易时段降低刷新频率",
+      "default": true
+    },
+    "decimals": {
+      "type": "integer",
+      "title": "价格小数位",
+      "default": 2
+    }
+  }
+}
