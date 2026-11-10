@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import subprocess
 import sys
 import tempfile
@@ -26,13 +27,21 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+# Windows 控制台默认 GBK，中文会乱码、勾叉直接抛 UnicodeEncodeError。
+# 这里把两个流钉成 UTF-8；标记本身只用 ASCII，编码再退化也不会中断。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 ROOT = Path(__file__).resolve().parent.parent
 ENTRY = ROOT / "publish" / "plugins" / "jiusi.stock-watch.toml"
 TOOL = ROOT / "scripts" / "oiplugin.py"
 
 
 def fail(msg: str) -> None:
-    print(f"  ✗ {msg}")
+    print(f"  [x] {msg}")
     sys.exit(1)
 
 
@@ -89,36 +98,41 @@ def main() -> None:
         got = sha256_of(blob)
         if got != want:
             ok = False
-            print(f"  ✗ sha256 不一致\n      条目 {want}\n      实际 {got}")
+            print(f"  [x]  sha256 不一致\n      条目 {want}\n      实际 {got}")
         else:
-            print(f"  ✓ sha256 {got}")
+            print(f"  [ok] sha256 {got}")
 
         with tempfile.TemporaryDirectory() as tmp:
             pkg = Path(tmp) / "pkg.oiplugin"
             pkg.write_bytes(blob)
+            # 子进程统一走 UTF-8：否则 Windows 下它会按 GBK 写、这里按 UTF-8 读，
+            # 解码异常在线程里被吞掉，验证信息就静默变空了。
             proc = subprocess.run(
                 [sys.executable, str(TOOL), "verify", str(pkg)],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             )
             if proc.returncode != 0:
                 ok = False
-                print("  ✗ 包校验失败")
+                print("  [x]  包校验失败")
                 print((proc.stdout + proc.stderr).strip())
             else:
                 lines = [ln.strip() for ln in (proc.stdout or "").splitlines() if ln.strip()]
                 head = next((ln for ln in lines if ln.startswith("ok")), "验签通过")
                 digest = next((ln for ln in lines if ln.startswith("digest")), "")
-                print(f"  ✓ {head}")
+                print(f"  [ok] {head}")
                 if digest:
-                    print(f"  ✓ {digest}")
+                    print(f"  [ok] {digest}")
 
         if not args.local and local.is_file():
             if local.read_bytes() != blob:
                 ok = False
-                print("  ✗ 远端附件与本地 dist/ 不是同一份字节")
+                print("  [x]  远端附件与本地 dist/ 不是同一份字节")
             else:
-                print("  ✓ 与本地 dist/ 一致")
+                print("  [ok] 与本地 dist/ 一致")
 
     print()
     print("全部通过，可以提 PR。" if ok else "存在问题，先别提 PR。")
