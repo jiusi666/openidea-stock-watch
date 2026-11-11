@@ -1,12 +1,14 @@
 id = "jiusi.stock-watch"
 name = "Stock Watch 股票盯盘"
-version = "0.9.5"
+version = "0.9.6"
 description = "A 股自选与持仓的轻量盯盘工具：卡片 / 表格双视图、列表与表格列都能拖动排序、日内区间条、涨跌配色与隐匿模式，浮动盈亏本地计算。行情来自公开接口轮询，自选、持仓与偏好只留在本机。"
 authors = ["九思"]
 license = "Apache-2.0"
-change-notes = "0.9.5 — 自选 / 持仓列表支持拖动排序（卡片与表格通用，按住行上下拖，带插入指示线，松手即记住）；提示改成底部浮层气泡，不再把面板内容顶下去、也不挡顶部按钮；刷新、改设置、切换视图这类操作不再弹提示，只在页脚更新状态。"
+change-notes = "0.9.6 — 补上插件图标（明暗两套，随主题切换），在市场列表和已安装列表里都能看到；0.9.5 — 自选 / 持仓列表支持拖动排序，提示改成底部浮层气泡。"
 categories = ["tools"]
 engines.openidea = "^1.4"
+icon = "icons/icon.svg"
+icon-dark = "icons/icon_dark.svg"
 wasm = "dist/plugin.wasm"
 activation = ["on-view:watchlist"]
 

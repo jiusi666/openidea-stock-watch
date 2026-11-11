@@ -1,0 +1,33 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stock Watch">
+  <defs>
+    <linearGradient id="tile" x1="6" y1="2" x2="58" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1E2C48"/>
+      <stop offset="1" stop-color="#0E1524"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="41" cy="23" r="23" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F2555A" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#F2555A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="trend" x1="8" y1="54" x2="52" y2="15" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F9B93C"/>
+      <stop offset="0.55" stop-color="#FFC95E"/>
+      <stop offset="1" stop-color="#FFDE96"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#tile)"/>
+  <rect width="64" height="64" rx="15" fill="url(#glow)"/>
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="14.25" fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="1.5"/>
+  <path d="M7.5 54.5 C 19 52.5, 25 41.5, 33.5 37.5 C 42 33.5, 47 21, 52 15"
+        fill="none" stroke="url(#trend)" stroke-width="2.8" stroke-linecap="round"/>
+  <g>
+    <line x1="19.5" y1="31" x2="19.5" y2="50" stroke="#3FC994" stroke-opacity="0.85" stroke-width="1.6" stroke-linecap="round"/>
+    <rect x="15.6" y="36" width="7.8" height="10" rx="2" fill="#0E1524" fill-opacity="0.5" stroke="#3FC994" stroke-width="1.7"/>
+  </g>
+  <g>
+    <line x1="40" y1="9.5" x2="40" y2="35" stroke="#FF6B70" stroke-width="1.7" stroke-linecap="round"/>
+    <rect x="35.9" y="14.5" width="8.2" height="16" rx="2.2" fill="#F2555A"/>
+    <rect x="35.9" y="14.5" width="8.2" height="16" rx="2.2" fill="#FF9A9E" fill-opacity="0.26"/>
+  </g>
+  <circle cx="52" cy="15" r="5.8" fill="#FFD87F" fill-opacity="0.2"/>
+  <circle cx="52" cy="15" r="3" fill="#FFD87F"/>
+</svg>
