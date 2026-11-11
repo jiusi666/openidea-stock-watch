@@ -4,7 +4,18 @@ version = "0.9.6"
 description = "A 股自选与持仓的轻量盯盘工具：卡片 / 表格双视图、列表与表格列都能拖动排序、日内区间条、涨跌配色与隐匿模式，浮动盈亏本地计算。行情来自公开接口轮询，自选、持仓与偏好只留在本机。"
 authors = ["九思"]
 license = "Apache-2.0"
-change-notes = "0.9.6 — 补上插件图标（明暗两套，随主题切换），在市场列表和已安装列表里都能看到；0.9.5 — 自选 / 持仓列表支持拖动排序，提示改成底部浮层气泡。"
+change-notes = """0.9.6 — 换行情源、补齐图标
+· 行情改走腾讯财经公开接口：原东方财富接口要先回 302 再跳转，两跳常超出宿主单次调用的预算，插件会被判超时反复重启
+· 新接口一次请求直接返回全部报价，实测 0.2 秒；请求另加 4 秒兜底超时
+· 补上插件图标（明暗两套）与侧边栏视图专属图标
+· 成本价 / 持仓数量的输入框去掉 WebView 自带的上下微调箭头
+0.9.5 — 拖动排序、提示重做
+· 自选与持仓列表支持按住行拖动排序，卡片与表格通用，松手即记住
+· 提示改为面板底部的浮层气泡，不占布局、不挡按钮；同一条错误 60 秒内只弹一次
+· 重复添加同一只股票会直接提示，不再静默无反应
+0.9.4 — 表格横向浏览重做
+· 横向滚动条改为自绘，任何主题下都常显，可拖动、可点轨道跳转
+· 「代码 / 名称」固定在左侧，「持仓 / 删除」固定在右侧，滚动时不再互相透色"""
 categories = ["tools"]
 engines.openidea = "^1.4"
 icon = "icons/icon.svg"
@@ -14,7 +25,8 @@ activation = ["on-view:watchlist"]
 
 [capabilities]
 required = ["storage"]
-optional = ["net:push2.eastmoney.com"]
+# 行情走腾讯财经的批量报价接口。
+optional = ["net:qt.gtimg.cn"]
 
 [[contributes.commands]]
 id = "refresh"
@@ -39,6 +51,7 @@ mac = "Meta+Shift+H"
 [[contributes.views]]
 id = "watchlist"
 title = "股票盯盘"
+icon = "icons/view.svg"
 location = "right"
 web = "web/index.html"
 

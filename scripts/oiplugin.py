@@ -134,6 +134,8 @@ def package_files(root: Path, manifest: dict) -> list[str]:
     add(manifest.get("icon-dark"))
     for view in manifest.get("contributes", {}).get("views", []):
         add(view.get("web"))
+        add(view.get("icon"))
+        add(view.get("icon-dark"))
     settings = manifest.get("contributes", {}).get("settings")
     if isinstance(settings, dict):
         add(settings.get("schema"))

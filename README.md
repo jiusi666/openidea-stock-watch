@@ -1,6 +1,6 @@
 # Stock Watch 股票盯盘
 
-A 股自选与持仓的轻量盯盘工具，作为 OpenIDEA 的侧边工具窗口运行。行情来自东方财富公开接口，自选、成本价、持仓数量与界面偏好只保存在本机。
+A 股自选与持仓的轻量盯盘工具，作为 OpenIDEA 的侧边工具窗口运行。行情来自腾讯财经公开接口，自选、成本价、持仓数量与界面偏好只保存在本机。
 
 | | |
 | --- | --- |
@@ -43,13 +43,14 @@ A 股自选与持仓的轻量盯盘工具，作为 OpenIDEA 的侧边工具窗�
 | 能力 | 类型 | 用途 |
 | --- | --- | --- |
 | `storage` | 必需 | 保存自选列表、成本价、持仓数量与界面偏好。数据留在本机，卸载即删除 |
-| `net:push2.eastmoney.com` | 可选 | 唯一的网络用途：向东方财富公开行情接口 `https://push2.eastmoney.com/api/qt/ulist.np/get` 轮询报价 |
+| `net:qt.gtimg.cn` | 可选 | 唯一的网络用途：向腾讯财经公开行情接口 `https://qt.gtimg.cn/q=` 轮询报价 |
 
-关于 `net:push2.eastmoney.com` 的几点说明——市场审阅时看的就是这几条：
+关于 `net:qt.gtimg.cn` 的几点说明——市场审阅时看的就是这几条：
 
 - 作用仅限于读取公开的股票与指数报价（现价、涨跌、开高低收、成交量、时间戳），不发送任何本地数据，不带账号信息。
 - 接口域名是静态白名单，不接受运行时传入的任意地址；用户也可以在 `Settings › Plugins` 里单独撤销这项授权，撤销后插件会提示原因而不是崩溃。
-- 请求会带 `Referer: https://quote.eastmoney.com/` 以匹配该接口的常规调用方式，`User-Agent` 标明 `OpenIDEA-StockWatch`。
+- 请求只带标明身份的 `User-Agent`（`OpenIDEA-StockWatch`），不伪造来源页。
+- 响应为 GBK 编码的文本，插件在本地解码（`encoding_rs`），不依赖任何额外服务。
 - 这是第三方免费公开接口，**没有 SLA，可能限频或变更**。插件默认 10 秒轮询、休市时降频；接口不可用时界面会显示错误而不是假装有数据。
 
 **这不是实时行情**。它是定时轮询，延迟取决于刷新间隔与接口本身，不适合任何对时效敏感的场景。
@@ -113,7 +114,7 @@ python scripts/oiplugin.py verify dist/jiusi.stock-watch-0.9.5.oiplugin
 plugin.toml            清单：能力、命令、快捷键、视图、状态栏、设置
 settings.schema.json   20 项偏好的默认值与枚举
 src/lib.rs             插件入口：取数、快照、命令、视图消息、状态栏、提醒
-src/market.rs          东方财富响应解析、代码归一、盈亏计算
+src/market.rs          腾讯行情（GBK）解析、代码归一、盈亏计算
 src/prefs.rs           偏好合并（逐字段）、列顺序规范化
 web/index.html         沙箱内界面：无外部资源，靠 postMessage 与 WASM 通信
 tests/ui/              界面用例与运行器

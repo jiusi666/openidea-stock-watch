@@ -1,6 +1,6 @@
 //! Stock Watch — OpenIDEA 自选股看盘插件。
 //!
-//! 行情来自东方财富公开接口；自选列表、成本价、持仓数量与界面偏好只写在本机
+//! 行情来自腾讯财经公开接口；自选列表、成本价、持仓数量与界面偏好只写在本机
 //! `host::storage`，不上传、不接交易、不提供投资建议。
 //! Web view 负责渲染与设置面板，本组件负责取数、解析、偏好与本地计算。
 
@@ -20,7 +20,7 @@ use serde_json::{Value, json};
 const VIEW: &str = "watchlist";
 const KEY_LIST: &str = "stockwatch:list";
 const KEY_LAST: &str = "stockwatch:last";
-const API_HOST: &str = "push2.eastmoney.com";
+const API_HOST: &str = "qt.gtimg.cn";
 const STATUS_ID: &str = "stockwatch.index";
 const INDICES: [(&str, &str); 3] = [
     ("1.000001", "上证指数"),
@@ -202,7 +202,7 @@ impl StockWatch {
             "rows": rows,
             "indices": indices,
             "updatedAt": updated_at,
-            "source": "东方财富（公开接口，轮询）",
+            "source": "腾讯财经（公开接口，轮询）",
             "intervalSec": self.prefs.interval_sec,
             "prefs": self.prefs,
             "message": message,
@@ -284,13 +284,14 @@ impl StockWatch {
                 ids.push(item.secid.clone());
             }
         }
-        let url = format!(
-            "https://{API_HOST}/api/qt/ulist.np/get?secids={}&fields=f2,f3,f4,f5,f6,f12,f13,f14,f15,f16,f17,f18,f124",
-            ids.join(",")
-        );
-        let request = HttpRequest::get(&url)
-            .header("User-Agent", "OpenIDEA-StockWatch/0.2")
-            .header("Referer", "https://quote.eastmoney.com/");
+        let codes: Vec<String> = ids.iter().filter_map(|id| market::tencent_code(id)).collect();
+        if codes.is_empty() {
+            return;
+        }
+        let url = format!("https://{API_HOST}/q={}", codes.join(","));
+        let mut request = HttpRequest::get(&url).header("User-Agent", "OpenIDEA-StockWatch/0.2");
+        // 宿主给单次调用的预算是 5 秒；留出解析余量，网络卡住时也先自己放弃。
+        request.timeout_ms = Some(4000);
 
         match host::fetch(&request) {
             Ok(response) if response.status == 200 => match market::parse_quotes(&response.body) {
@@ -304,9 +305,9 @@ impl StockWatch {
                 Err(e) => self.push(&e),
             },
             Ok(response) => self.push(&format!("行情接口返回 HTTP {}", response.status)),
-            Err(Error::Denied(_)) => {
-                self.push("未授予 net:push2.eastmoney.com 权限，请在 Settings › Plugins 中开启")
-            }
+            Err(Error::Denied(_)) => self.push(
+                "行情请求未被授权：请在 Settings › Plugins 里允许 net:qt.gtimg.cn",
+            ),
             Err(e) => self.push(&format!("行情请求失败：{e}")),
         }
     }

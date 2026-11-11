@@ -128,6 +128,10 @@
   input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
   .addbar input { flex: 1; }
   input[type="number"] { width: 72px; }
+  /* 去掉数字输入框的上下微调箭头：这里都靠直接键入，WebView 自带的按钮又丑又窄。 */
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; display: none; margin: 0; }
   select { max-width: 100%; }
 
   .listbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--sw-line); padding-bottom: 6px; }
@@ -682,7 +686,7 @@
   var lastError = { text: '', at: 0 };
   function notifyMessage(text) {
     if (!text) return;
-    if (!/失败|不对|未授予|无权|超时|拒绝|权限|无法|不存在|请先|HTTP\s*\d{3}/.test(text)) return;
+    if (!/失败|不对|未授予|未授权|无权|超时|拒绝|权限|无法|不存在|请先|HTTP\s*\d{3}/.test(text)) return;
     var now = Date.now();
     if (text === lastError.text && now - lastError.at < 60000) return;
     lastError = { text: text, at: now };
@@ -1607,7 +1611,7 @@
       rows: JSON.parse(JSON.stringify(local.rows)),
       indices: JSON.parse(JSON.stringify(local.indices)),
       updatedAt: new Date().toTimeString().slice(0, 8),
-      source: hasHost ? '东方财富（公开接口，轮询）' : '演示数据（本地预览）',
+      source: hasHost ? '腾讯财经（公开接口，轮询）' : '演示数据（本地预览）',
       intervalSec: local.prefs.intervalSec,
       prefs: JSON.parse(JSON.stringify(local.prefs)),
       message: message || ''
