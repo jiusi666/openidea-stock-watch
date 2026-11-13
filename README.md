@@ -29,9 +29,10 @@ A 股自选与持仓的轻量盯盘工具，作为 OpenIDEA 的侧边工具窗�
 
 ## 安装
 
-市场里还没上架时，有两种装法：
+已上架 OpenIDEA 社区插件市场，当前 0.9.7：
 
-- **从包安装**：`Settings › Plugins › Install from Disk`，选 `jiusi.stock-watch-0.9.5.oiplugin`。
+- **市场安装**（推荐）：`Settings › Plugins › Available` 搜索「Stock Watch」或「股票盯盘」。
+- **从包安装**：`Settings › Plugins › Install from Disk`，选 `jiusi.stock-watch-0.9.7.oiplugin`。
 - **开发期链接**：`openidea-plugin link`（或把本目录写进 `%APPDATA%\ai.l0ng.openidea\plugins\links.json` 的 `paths`），改界面不用重编。
 
 上架流程见 [docs/PUBLISHING.md](docs/PUBLISHING.md)。
@@ -131,3 +132,17 @@ dist/plugin.wasm       构建产物
 ## 数据与免责
 
 行情数据版权归数据提供方。本插件仅用于个人查看公开行情，不构成任何投资建议；据此操作的风险由使用者自行承担。
+
+## 路线图
+
+- **0.9.8**：行情源可配置与失败自动切换（仍只访问用户显式声明的域名）、自选列表导入导出、更多指数与板块。
+- **1.0.0**：面板布局与快捷键可定制、提醒规则细化、深浅主题下的图表可读性。
+**明确不做**：不下单、不接券商、不做 K 线、不上传持仓、不给投资建议，也不采集任何使用数据。这个边界不会变。
+
+## 交流
+
+Java 技术交流 Q 群：700072697
+
+## 许可
+
+Apache-2.0。

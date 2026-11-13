@@ -9,3 +9,8 @@ sha256 = "1ca79b4fa4bc18bfbf2e6fb8f72ba886dd0e5f83898848b39023a0ebbba31ba1"
 version = "0.9.6"
 package = "https://github.com/jiusi666/openidea-stock-watch/releases/download/v0.9.6/jiusi.stock-watch-0.9.6.oiplugin"
 sha256 = "f68e10fffc94739dffd6b7b1a115cdb7117f01a6501e65938b1f7d558837b45f"
+
+[[versions]]
+version = "0.9.7"
+package = "https://github.com/jiusi666/openidea-stock-watch/releases/download/v0.9.7/jiusi.stock-watch-0.9.7.oiplugin"
+sha256 = "06c776650c25004d697d2a333ce1da70c7a2cbecf9b520691b118c54aea9001f"
